@@ -1,0 +1,228 @@
+{
+  "topics": [
+    {
+      "id": "what-is-greenshoe",
+      "title": "What is GreenShoe?",
+      "category": "Getting Started",
+      "priority": 1,
+      "content": {
+        "overview": "GreenShoe is an internal tool for managing client website staging and deployments. It allows you to safely test changes before pushing them live.",
+        "keyPoints": [
+          "Pull client sites into a staging environment",
+          "Edit locally with full control",
+          "Preview changes before going live",
+          "Automatic backups and rollback capability"
+        ]
+      },
+      "hasScreenshot": false
+    },
+    {
+      "id": "adding-site",
+      "title": "Adding a New Site",
+      "category": "Site Management",
+      "priority": 2,
+      "content": {
+        "overview": "Add new client sites to GreenShoe for staging management.",
+        "steps": [
+          "Click the 'Add Site' button in the top right",
+          "Enter the site name (e.g., 'Client ABC')",
+          "Enter the live URL (e.g., 'https://clientabc.com')",
+          "Select connection type:",
+          "  • Crawl Only: For publicly accessible sites (recommended)",
+          "  • SFTP: For sites requiring file transfer access",
+          "  • SSH: For sites requiring direct server access",
+          "Click 'Create Site'"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "add-site-modal.png"
+    },
+    {
+      "id": "site-evaluation",
+      "title": "Site Evaluation",
+      "category": "Site Operations",
+      "priority": 3,
+      "content": {
+        "overview": "Before pulling a site, run an evaluation to check crawlability and estimate size.",
+        "steps": [
+          "Click 'Evaluate' next to a newly added site",
+          "Review the evaluation results:",
+          "  • Crawling Success Rate: Should be close to 100%",
+          "  • Total Pages Found: Number of pages detected",
+          "  • Estimated Size: Total size of site content",
+          "If results look good, click 'Proceed to Pull'",
+          "If results show issues, check the live URL and try again"
+        ],
+        "keyPoints": [
+          "Evaluation takes 5-10 seconds on average",
+          "A success rate below 90% may indicate access issues",
+          "Large sites (>500MB) take longer to pull"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "evaluation-results.png"
+    },
+    {
+      "id": "pulling-from-live",
+      "title": "Pulling from Live",
+      "category": "Site Operations",
+      "priority": 4,
+      "content": {
+        "overview": "Pull creates a copy of the live site in the staging environment.",
+        "steps": [
+          "Click 'Pull' next to the site you want to update",
+          "Watch the progress indicator showing pages being crawled",
+          "Wait for the status to change from 'Pulling...' to 'Active'",
+          "The site is now ready for editing or preview"
+        ],
+        "keyPoints": [
+          "Pull operations can take 2-5 minutes depending on site size",
+          "The progress bar shows page count, not percentage",
+          "You'll see a notification when the pull completes",
+          "Multiple pulls can run simultaneously for different sites"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "pull-progress.png"
+    },
+    {
+      "id": "local-editing",
+      "title": "Local Editing Workflow",
+      "category": "Editing",
+      "priority": 5,
+      "content": {
+        "overview": "Download, edit locally, and upload changes back to staging.",
+        "steps": [
+          "Ensure site status is 'Active' (pull first if needed)",
+          "Click 'Download' to get a ZIP file of the staging site",
+          "Extract the ZIP to your local machine",
+          "Make your edits using your preferred editor",
+          "Re-zip the modified files (ensure directory structure is intact)",
+          "Click 'Upload' and select your modified ZIP file",
+          "Confirm the upload to replace staging content"
+        ],
+        "keyPoints": [
+          "Always maintain the original folder structure",
+          "Test locally before uploading if possible",
+          "Upload creates a new version (previous version archived)",
+          "Maximum upload size: 2GB"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "download-upload.png"
+    },
+    {
+      "id": "previewing-changes",
+      "title": "Previewing Changes",
+      "category": "Review",
+      "priority": 6,
+      "content": {
+        "overview": "Review what changed before pushing to production.",
+        "steps": [
+          "Click 'Preview Changes' on an active site",
+          "Review the diff showing:",
+          "  • Files added (green)",
+          "  • Files modified (yellow)",
+          "  • Files deleted (red)",
+          "Expand individual files to see line-by-line changes",
+          "Select specific files to push (or push all)",
+          "Click 'Push Selected' or 'Push All Changes'"
+        ],
+        "keyPoints": [
+          "Only Project Managers and Admins can see this option",
+          "Changes are compared against the last live snapshot",
+          "You can cherry-pick specific files to push"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "preview-changes.png"
+    },
+    {
+      "id": "pushing-to-production",
+      "title": "Pushing to Production",
+      "category": "Deployment",
+      "priority": 7,
+      "content": {
+        "overview": "Deploy staging changes to the live production site. (PM/Admin only)",
+        "steps": [
+          "Review changes using 'Preview Changes'",
+          "Confirm you want to push to production",
+          "System automatically creates a backup of current live site",
+          "Changes are deployed to production",
+          "Monitor for success notification",
+          "If issues occur, use 'Archives' to rollback"
+        ],
+        "keyPoints": [
+          "ONLY Project Managers and Admins have push access",
+          "Automatic backup is created before every push",
+          "Last 5 versions are kept in archives",
+          "Push operations cannot be undone (but can be rolled back)"
+        ]
+      },
+      "hasScreenshot": false
+    },
+    {
+      "id": "site-status",
+      "title": "Site Status Indicators",
+      "category": "Understanding the UI",
+      "priority": 8,
+      "content": {
+        "overview": "Understand what each site status badge means.",
+        "keyPoints": [
+          "Never Pulled: Site is added but not yet pulled into staging",
+          "Active: Site is pulled and ready for editing/pushing",
+          "Pulling: Currently downloading site from live (in progress)",
+          "Pushing: Currently deploying changes to live (in progress)",
+          "Error: An operation failed - check notifications for details"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "status-badges.png"
+    },
+    {
+      "id": "archives-restore",
+      "title": "Archives & Restore",
+      "category": "Backup & Recovery",
+      "priority": 9,
+      "content": {
+        "overview": "View version history and restore previous versions if needed. (PM/Admin only)",
+        "steps": [
+          "Click 'Archives' next to any active site",
+          "Browse the version history showing:",
+          "  • Timestamp of each version",
+          "  • Operation type (Pull, Upload, Push)",
+          "  • User who performed the operation",
+          "To restore a version:",
+          "  • Click 'Restore' next to the desired version",
+          "  • Confirm the restore operation",
+          "  • The selected version replaces current staging content"
+        ],
+        "keyPoints": [
+          "Last 5 versions are kept per site",
+          "Older versions are automatically cleaned up",
+          "Restore affects staging, not live (push separately if needed)"
+        ]
+      },
+      "hasScreenshot": false
+    },
+    {
+      "id": "progress-indicators",
+      "title": "Progress Indicators",
+      "category": "Understanding the UI",
+      "priority": 10,
+      "content": {
+        "overview": "Understand what the progress bar shows during operations.",
+        "keyPoints": [
+          "Animated pulsing bar: Operation is actively running",
+          "Page count shown: 'Crawling... 52 pages processed'",
+          "No percentage during crawl (total pages unknown until complete)",
+          "100% shown only during final stage (URL rewriting)",
+          "Progress clears automatically after completion",
+          "If progress seems stuck for >5 minutes, refresh the page"
+        ]
+      },
+      "hasScreenshot": true,
+      "screenshotPlaceholder": "progress-indicator.png"
+    }
+  ]
+}

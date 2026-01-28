@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenShoe Progress Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .progress-bar-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .phases {
+            display: grid;
+            gap: 20px;
+        }
+
+        .phase {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .phase-header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .phase-header h2 {
+            font-size: 20px;
+        }
+
+        .phase-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .phase-content {
+            padding: 20px 25px;
+            display: none;
+        }
+
+        .phase.expanded .phase-content {
+            display: block;
+        }
+
+        .task {
+            border-left: 4px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .task.completed {
+            border-left-color: #4caf50;
+            background: #f1f8f4;
+        }
+
+        .task.in-progress {
+            border-left-color: #ff9800;
+            background: #fff8f0;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .task-title {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .task-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .task-status.pending {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .task-status.in-progress {
+            background: #ff9800;
+            color: white;
+        }
+
+        .task-status.completed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .task-agent {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .acceptance-criteria {
+            margin-top: 10px;
+        }
+
+        .acceptance-criteria h4 {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .criteria-list {
+            list-style: none;
+        }
+
+        .criteria-item {
+            padding: 6px 0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .criteria-item::before {
+            content: "○ ";
+            color: #999;
+            font-weight: bold;
+        }
+
+        .criteria-item.completed::before {
+            content: "✓ ";
+            color: #4caf50;
+        }
+
+        .activity-feed {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        .activity-feed h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .activity-item {
+            border-left: 2px solid #667eea;
+            padding-left: 15px;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .activity-date {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .refresh-notice {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .auto-refresh {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .refreshing {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🟢 GreenShoe Progress Dashboard</h1>
+            <p>Real-time implementation tracking for the Internal Staging Tool</p>
+        </div>
+
+        <div class="refresh-notice">
+            <span class="auto-refresh">● Live</span> - Dashboard auto-refreshes every 10 seconds
+        </div>
+
+        <div class="stats" id="stats">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="progress-bar-container">
+            <h3 style="margin-bottom: 15px; color: #667eea;">Overall Progress</h3>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="progressBar">0%</div>
+            </div>
+        </div>
+
+        <div class="phases" id="phases">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="activity-feed">
+            <h2>Recent Activity</h2>
+            <div id="activity">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let progressData = null;
+
+        async function loadProgress() {
+            try {
+                const response = await fetch('progress.json?' + new Date().getTime());
+                progressData = await response.json();
+                renderDashboard();
+            } catch (error) {
+                console.error('Error loading progress:', error);
+            }
+        }
+
+        function renderDashboard() {
+            if (!progressData) return;
+
+            // Render stats
+            const completionPercent = Math.round((progressData.completedTasks / progressData.totalTasks) * 100);
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Tasks</h3>
+                    <div class="value">${progressData.totalTasks}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Completed</h3>
+                    <div class="value" style="color: #4caf50;">${progressData.completedTasks}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>In Progress</h3>
+                    <div class="value" style="color: #ff9800;">${countTasksByStatus('in-progress')}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Remaining</h3>
+                    <div class="value" style="color: #f44336;">${progressData.totalTasks - progressData.completedTasks}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Current Phase</h3>
+                    <div class="value">${progressData.currentPhase}/10</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Completion</h3>
+                    <div class="value">${completionPercent}%</div>
+                </div>
+            `;
+
+            // Render progress bar
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = completionPercent + '%';
+            progressBar.textContent = completionPercent + '%';
+
+            // Render phases
+            const phasesHtml = progressData.phases.map((phase, index) => {
+                const completedTasksInPhase = phase.tasks.filter(t => t.status === 'completed').length;
+                const totalTasksInPhase = phase.tasks.length;
+                const isExpanded = index === progressData.currentPhase - 1;
+
+                return `
+                    <div class="phase ${isExpanded ? 'expanded' : ''}">
+                        <div class="phase-header" onclick="togglePhase(this)">
+                            <h2>Phase ${phase.id}: ${phase.name}</h2>
+                            <span class="phase-badge">${completedTasksInPhase}/${totalTasksInPhase} Tasks</span>
+                        </div>
+                        <div class="phase-content">
+                            ${phase.tasks.map(task => renderTask(task)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('phases').innerHTML = phasesHtml;
+
+            // Render activity
+            const activityHtml = progressData.recentActivity.slice(0, 10).map(activity => `
+                <div class="activity-item">
+                    <span class="activity-date">${activity.date}</span> - ${activity.description}
+                </div>
+            `).join('');
+
+            document.getElementById('activity').innerHTML = activityHtml || '<p style="color: #999;">No recent activity</p>';
+        }
+
+        function renderTask(task) {
+            const completedCriteriaCount = task.completedCriteria.length;
+            const totalCriteriaCount = task.acceptanceCriteria.length;
+
+            return `
+                <div class="task ${task.status}">
+                    <div class="task-header">
+                        <div class="task-title">Task ${task.id}: ${task.name}</div>
+                        <span class="task-status ${task.status}">${task.status.replace('-', ' ')}</span>
+                    </div>
+                    <div class="task-meta">
+                        <span class="task-agent">${task.agent}</span>
+                        <span>${completedCriteriaCount}/${totalCriteriaCount} criteria met</span>
+                    </div>
+                    <div class="acceptance-criteria">
+                        <h4>Acceptance Criteria:</h4>
+                        <ul class="criteria-list">
+                            ${task.acceptanceCriteria.map((criteria, index) => `
+                                <li class="criteria-item ${task.completedCriteria.includes(index) ? 'completed' : ''}">
+                                    ${criteria}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function countTasksByStatus(status) {
+            let count = 0;
+            progressData.phases.forEach(phase => {
+                count += phase.tasks.filter(t => t.status === status).length;
+            });
+            return count;
+        }
+
+        function togglePhase(element) {
+            const phase = element.parentElement;
+            phase.classList.toggle('expanded');
+        }
+
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            document.body.classList.add('refreshing');
+            loadProgress();
+            setTimeout(() => {
+                document.body.classList.remove('refreshing');
+            }, 300);
+        }, 10000);
+
+        // Initial load
+        loadProgress();
+    </script>
+</body>
+</html>

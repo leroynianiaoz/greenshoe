@@ -1,0 +1,253 @@
+{
+  "projectName": "GreenShoe Internal Staging Tool",
+  "startDate": "2026-01-27",
+  "totalTasks": 53,
+  "completedTasks": 0,
+  "currentPhase": 1,
+  "phases": [
+    {
+      "id": 1,
+      "name": "Project Setup",
+      "tasks": [
+        {
+          "id": 1,
+          "name": "Initialize project structure",
+          "status": "in-progress",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "npm install succeeds in both backend and frontend",
+            "docker-compose up starts PostgreSQL and Redis",
+            "Project structure matches specification"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 2,
+          "name": "Database schema design and migrations",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Migrations run successfully",
+            "All tables created with correct columns",
+            "Foreign key constraints work correctly"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 3,
+          "name": "Backend project scaffolding",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Server starts without errors",
+            "Health endpoint returns 200",
+            "Database connection established",
+            "Redis connection established"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 4,
+          "name": "Frontend project scaffolding",
+          "status": "pending",
+          "agent": "frontend-engineer",
+          "acceptanceCriteria": [
+            "npm run dev starts frontend",
+            "Basic layout renders in browser",
+            "Tailwind styles work"
+          ],
+          "completedCriteria": []
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Authentication & Security",
+      "tasks": [
+        {
+          "id": 5,
+          "name": "User authentication - Backend",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Login returns JWT token",
+            "Invalid credentials return 401",
+            "Token verification works",
+            "Tests pass"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 6,
+          "name": "Role-based access control",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Developer cannot access push endpoint",
+            "Developer cannot access user management",
+            "Admin can access all endpoints",
+            "Tests pass for all role combinations"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 7,
+          "name": "Credential encryption service",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Encrypted data is not readable",
+            "Decryption returns original data",
+            "Different inputs produce different ciphertexts",
+            "No plaintext credentials in logs"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 8,
+          "name": "User authentication - Frontend",
+          "status": "pending",
+          "agent": "frontend-engineer",
+          "acceptanceCriteria": [
+            "Login form submits and stores token",
+            "Protected routes redirect to login",
+            "Logout clears token and redirects"
+          ],
+          "completedCriteria": []
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Site Management",
+      "tasks": [
+        {
+          "id": 9,
+          "name": "Site CRUD - Backend",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Create site stores encrypted credentials",
+            "WordPress without DB creds returns error",
+            "List returns all sites with status",
+            "Delete removes site and related data"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 10,
+          "name": "Platform detection service",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "WordPress site detected correctly",
+            "Static HTML site detected correctly",
+            "Detection result stored in database"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 11,
+          "name": "SFTP/SSH connection service",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "Valid credentials establish connection",
+            "Invalid credentials return clear error",
+            "Timeout triggers after 30 seconds",
+            "Connection properly closed after use"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 12,
+          "name": "Site management - Frontend",
+          "status": "pending",
+          "agent": "frontend-engineer",
+          "acceptanceCriteria": [
+            "Sites list displays all sites",
+            "Add site form works with validation",
+            "Delete only visible for Admin",
+            "Staging URL links correctly"
+          ],
+          "completedCriteria": []
+        },
+        {
+          "id": 13,
+          "name": "Site status indicators",
+          "status": "pending",
+          "agent": "frontend-engineer",
+          "acceptanceCriteria": [
+            "Status badge shows correct state",
+            "Progress bar updates during operations",
+            "Last pulled time displays correctly"
+          ],
+          "completedCriteria": []
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Pull System",
+      "tasks": [
+        {
+          "id": 14,
+          "name": "File sync service - Pull",
+          "status": "pending",
+          "agent": "backend-engineer",
+          "acceptanceCriteria": [
+            "All files downloaded recursively",
+            "Progress tracked accurately",
+            ">2GB site rejected with error",
+            "Files stored in correct location"
+          ],
+          "completedCriteria": []
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Push System",
+      "tasks": []
+    },
+    {
+      "id": 6,
+      "name": "Archive System",
+      "tasks": []
+    },
+    {
+      "id": 7,
+      "name": "Local Editing",
+      "tasks": []
+    },
+    {
+      "id": 8,
+      "name": "Notifications & Polish",
+      "tasks": []
+    },
+    {
+      "id": 9,
+      "name": "Advanced Push Features",
+      "tasks": []
+    },
+    {
+      "id": 10,
+      "name": "Pre-Pull Evaluation",
+      "tasks": []
+    }
+  ],
+  "recentActivity": [
+    {
+      "date": "2026-01-27",
+      "description": "Starting Task 1: Initialize project structure"
+    },
+    {
+      "date": "2026-01-27",
+      "description": "Task 1 marked as in-progress: Initialize project structure"
+    },
+    {
+      "date": "2026-01-27",
+      "description": "Project initialized with implementation guide and progress tracker"
+    }
+  ]
+}

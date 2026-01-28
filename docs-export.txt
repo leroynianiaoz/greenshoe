@@ -1,0 +1,4381 @@
+﻿=== docs\accessibility.md ===
+
+# Accessibility Guide
+
+This document outlines accessibility requirements and implementation patterns for Android and iOS applications.
+
+## Overview
+
+Accessibility ensures your app is usable by everyone, including people with disabilities. Both platforms provide robust accessibility frameworks that must be properly implemented.
+
+## Core Principles
+
+1. **Perceivable**: Information must be presentable to users in ways they can perceive
+2. **Operable**: UI components must be operable by all users
+3. **Understandable**: Information and operation must be understandable
+4. **Robust**: Content must be robust enough for assistive technologies
+
+## Minimum Requirements
+
+| Requirement | Android | iOS |
+|-------------|---------|-----|
+| Touch Target Size | 48x48 dp | 44x44 pt |
+| Color Contrast Ratio | 4.5:1 (text), 3:1 (large text) | 4.5:1 (text), 3:1 (large text) |
+| Screen Reader Support | TalkBack | VoiceOver |
+| Font Scaling | Up to 200% | Dynamic Type (all sizes) |
+| Keyboard Navigation | Full support | Full support |
+
+## Screen Reader Support
+
+### Android (TalkBack)
+
+#### Content Descriptions
+```kotlin
+// Images
+Image(
+    painter = painterResource(R.drawable.profile),
+    contentDescription = "User profile picture"
+)
+
+// Decorative images (no announcement)
+Image(
+    painter = painterResource(R.drawable.decorative),
+    contentDescription = null
+)
+
+// Icons with actions
+IconButton(onClick = { /* delete */ }) {
+    Icon(
+        imageVector = Icons.Default.Delete,
+        contentDescription = "Delete item"
+    )
+}
+```
+
+#### Semantic Properties
+```kotlin
+// Headings
+Text(
+    text = "Section Title",
+    modifier = Modifier.semantics { heading() }
+)
+
+// Buttons with state
+Button(
+    onClick = { },
+    modifier = Modifier.semantics {
+        stateDescription = if (isSelected) "Selected" else "Not selected"
+    }
+) {
+    Text("Option")
+}
+
+// Custom actions
+Box(
+    modifier = Modifier.semantics {
+        customActions = listOf(
+            CustomAccessibilityAction("Delete") { delete(); true },
+            CustomAccessibilityAction("Edit") { edit(); true }
+        )
+    }
+)
+
+// Live regions (announce changes)
+Text(
+    text = "Items in cart: $count",
+    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+)
+```
+
+#### Grouping Related Elements
+```kotlin
+// Merge child semantics into parent
+Row(
+    modifier = Modifier.semantics(mergeDescendants = true) {
+        contentDescription = "John Doe, Software Engineer, Online"
+    }
+) {
+    Image(/* avatar */)
+    Column {
+        Text("John Doe")
+        Text("Software Engineer")
+    }
+    Icon(/* online indicator */)
+}
+```
+
+### iOS (VoiceOver)
+
+#### Accessibility Labels
+```swift
+// Images
+Image("profile")
+    .accessibilityLabel("User profile picture")
+
+// Decorative images
+Image("decorative")
+    .accessibilityHidden(true)
+
+// Buttons
+Button(action: { /* delete */ }) {
+    Image(systemName: "trash")
+}
+.accessibilityLabel("Delete item")
+```
+
+#### Accessibility Traits
+```swift
+// Headers
+Text("Section Title")
+    .accessibilityAddTraits(.isHeader)
+
+// Buttons with state
+Button(action: { }) {
+    Text("Option")
+}
+.accessibilityAddTraits(isSelected ? .isSelected : [])
+
+// Images that are buttons
+Image(systemName: "gear")
+    .accessibilityAddTraits(.isButton)
+```
+
+#### Grouping Elements
+```swift
+// Combine elements into single announcement
+HStack {
+    Image("avatar")
+    VStack {
+        Text("John Doe")
+        Text("Software Engineer")
+    }
+    Image(systemName: "circle.fill")
+}
+.accessibilityElement(children: .combine)
+.accessibilityLabel("John Doe, Software Engineer, Online")
+```
+
+#### Custom Actions
+```swift
+Text("Item")
+    .accessibilityAction(named: "Delete") {
+        deleteItem()
+    }
+    .accessibilityAction(named: "Edit") {
+        editItem()
+    }
+```
+
+## Touch Target Size
+
+### Android
+```kotlin
+// Minimum 48dp touch target
+IconButton(
+    onClick = { },
+    modifier = Modifier.size(48.dp)  // Explicit size
+) {
+    Icon(
+        imageVector = Icons.Default.Close,
+        contentDescription = "Close",
+        modifier = Modifier.size(24.dp)  // Visual size can be smaller
+    )
+}
+
+// Using minimumInteractiveComponentSize
+Text(
+    text = "Clickable",
+    modifier = Modifier
+        .clickable { }
+        .minimumInteractiveComponentSize()
+)
+```
+
+### iOS
+```swift
+// Minimum 44pt touch target
+Button(action: { }) {
+    Image(systemName: "xmark")
+        .frame(width: 44, height: 44)
+}
+
+// Increase hit area without changing visual
+Button(action: { }) {
+    Text("Small text")
+}
+.frame(minWidth: 44, minHeight: 44)
+```
+
+## Color and Contrast
+
+### Guidelines
+- **Normal text**: 4.5:1 contrast ratio minimum
+- **Large text** (18pt+ or 14pt bold): 3:1 contrast ratio minimum
+- **Icons and graphics**: 3:1 contrast ratio minimum
+- Don't rely solely on color to convey information
+
+### Android
+```kotlin
+// Use semantic colors
+Text(
+    text = "Error message",
+    color = MaterialTheme.colorScheme.error
+)
+
+// Add icon alongside color
+Row {
+    Icon(
+        imageVector = Icons.Default.Error,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.error
+    )
+    Text("Error: Invalid input")
+}
+```
+
+### iOS
+```swift
+// Use semantic colors
+Text("Error message")
+    .foregroundStyle(.red)
+
+// Add icon alongside color
+HStack {
+    Image(systemName: "exclamationmark.circle")
+    Text("Error: Invalid input")
+}
+.foregroundStyle(.red)
+```
+
+## Dynamic Type / Font Scaling
+
+### Android
+```kotlin
+// Use sp units for text (scales with system settings)
+Text(
+    text = "Body text",
+    fontSize = 16.sp  // Will scale
+)
+
+// Test with different font scales in preview
+@Preview(fontScale = 2.0f)
+@Composable
+fun LargeFontPreview() {
+    MyScreen()
+}
+
+// Handle text overflow
+Text(
+    text = longText,
+    maxLines = 2,
+    overflow = TextOverflow.Ellipsis
+)
+```
+
+### iOS
+```swift
+// Use built-in text styles (automatically scale)
+Text("Body text")
+    .font(.body)
+
+// Custom fonts with scaling
+Text("Custom")
+    .font(.custom("MyFont", size: 16, relativeTo: .body))
+
+// Test with environment modifier
+MyView()
+    .environment(\.sizeCategory, .accessibilityExtraExtraExtraLarge)
+
+// Handle text that might truncate
+Text(longText)
+    .lineLimit(2)
+    .truncationMode(.tail)
+```
+
+## Keyboard Navigation (iOS)
+
+```swift
+// Focus management
+@FocusState private var focusedField: Field?
+
+enum Field {
+    case email
+    case password
+}
+
+var body: some View {
+    VStack {
+        TextField("Email", text: $email)
+            .focused($focusedField, equals: .email)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .password }
+        
+        SecureField("Password", text: $password)
+            .focused($focusedField, equals: .password)
+            .submitLabel(.done)
+            .onSubmit { login() }
+    }
+}
+```
+
+## Motion and Animation
+
+### Reduce Motion Support
+
+#### Android
+```kotlin
+@Composable
+fun AnimatedContent() {
+    val reduceMotion = LocalReduceMotion.current
+    
+    val animationSpec = if (reduceMotion) {
+        snap<Float>()  // No animation
+    } else {
+        tween<Float>(durationMillis = 300)
+    }
+    
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = if (reduceMotion) EnterTransition.None else fadeIn(animationSpec),
+        exit = if (reduceMotion) ExitTransition.None else fadeOut(animationSpec)
+    ) {
+        Content()
+    }
+}
+```
+
+#### iOS
+```swift
+struct AnimatedContent: View {
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    
+    var body: some View {
+        Content()
+            .animation(reduceMotion ? nil : .easeInOut, value: someValue)
+    }
+}
+```
+
+## Form Accessibility
+
+### Android
+```kotlin
+Column {
+    // Associate label with field
+    OutlinedTextField(
+        value = email,
+        onValueChange = { email = it },
+        label = { Text("Email address") },
+        modifier = Modifier.semantics {
+            error = emailError  // Announce error
+        },
+        isError = emailError != null
+    )
+    
+    // Error message
+    emailError?.let { error ->
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Assertive
+            }
+        )
+    }
+}
+```
+
+### iOS
+```swift
+VStack(alignment: .leading) {
+    TextField("Email address", text: $email)
+        .accessibilityLabel("Email address")
+        .accessibilityValue(email.isEmpty ? "Empty" : email)
+    
+    if let error = emailError {
+        Text(error)
+            .foregroundStyle(.red)
+            .accessibilityLabel("Error: \(error)")
+    }
+}
+```
+
+## Testing Accessibility
+
+### Android
+
+#### Using Accessibility Scanner
+1. Install Accessibility Scanner from Play Store
+2. Enable in Settings > Accessibility
+3. Run scan on your app
+4. Review and fix issues
+
+#### Compose Testing
+```kotlin
+@Test
+fun checkAccessibility() {
+    composeTestRule.setContent {
+        MyScreen()
+    }
+    
+    // Check content description exists
+    composeTestRule
+        .onNodeWithContentDescription("Profile picture")
+        .assertExists()
+    
+    // Check minimum touch target
+    composeTestRule
+        .onNodeWithContentDescription("Delete")
+        .assertTouchHeightIsAtLeast(48.dp)
+        .assertTouchWidthIsAtLeast(48.dp)
+}
+```
+
+### iOS
+
+#### Using Accessibility Inspector
+1. Open Xcode > Developer Tools > Accessibility Inspector
+2. Connect device or simulator
+3. Inspect elements and audit
+
+#### XCUITest
+```swift
+func testAccessibility() {
+    let app = XCUIApplication()
+    app.launch()
+    
+    // Check element exists and is accessible
+    XCTAssertTrue(app.images["Profile picture"].exists)
+    
+    // Check button is accessible
+    let deleteButton = app.buttons["Delete"]
+    XCTAssertTrue(deleteButton.isHittable)
+}
+```
+
+## Accessibility Checklist
+
+### Per Screen
+- [ ] All images have appropriate content descriptions
+- [ ] All buttons and interactive elements are labeled
+- [ ] Headings are marked as headings
+- [ ] Reading order is logical
+- [ ] Focus order follows visual order
+- [ ] Touch targets are at least 44/48 pt/dp
+- [ ] Color is not sole means of conveying information
+- [ ] Contrast ratios meet minimums
+
+### Per Form
+- [ ] Labels are associated with inputs
+- [ ] Error messages are announced
+- [ ] Required fields are indicated
+- [ ] Keyboard navigation works
+- [ ] Form submission is accessible
+
+### App-Wide
+- [ ] Respects system font size settings
+- [ ] Respects reduce motion setting
+- [ ] Works with screen reader enabled
+- [ ] Works with keyboard only (iOS)
+- [ ] No time-sensitive interactions without alternatives
+
+## Spec Template Addition
+
+When writing specs for mobile features, include an accessibility section:
+
+```markdown
+## 8. Accessibility Requirements
+
+### Screen Reader
+- [ ] All interactive elements have labels
+- [ ] Images have descriptions (or hidden if decorative)
+- [ ] Headings marked appropriately
+- [ ] Reading order is logical
+
+### Visual
+- [ ] Touch targets minimum 44/48 pt/dp
+- [ ] Color contrast meets WCAG AA (4.5:1)
+- [ ] Information not conveyed by color alone
+
+### Motion
+- [ ] Animations respect reduce motion setting
+
+### Testing
+- [ ] Test with TalkBack (Android)
+- [ ] Test with VoiceOver (iOS)
+- [ ] Test with large fonts (200%)
+```
+
+## Resources
+
+- [Android Accessibility](https://developer.android.com/guide/topics/ui/accessibility)
+- [iOS Accessibility](https://developer.apple.com/accessibility/)
+- [WCAG Guidelines](https://www.w3.org/WAI/standards-guidelines/wcag/)
+- [Material Design Accessibility](https://m3.material.io/foundations/accessible-design)
+- [Apple HIG Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)
+
+
+=== docs\best-practices.md ===
+
+# Best Practices for Claude-in-the-Loop Development
+
+Advanced patterns and recommendations for spec-driven, multi-agent development.
+
+## Spec Writing
+
+### Make Acceptance Criteria Testable
+
+Every criterion should be verifiable by a test:
+
+**Bad:**
+```markdown
+- A1: The system should be fast
+- A2: Error messages should be helpful
+```
+
+**Good:**
+```markdown
+- A1: API responds within 200ms for 95% of requests
+- A2: Error responses include HTTP status, error code, and human-readable message
+```
+
+### Use Given-When-Then Format
+
+Structure acceptance criteria clearly:
+
+```markdown
+### A1: Create user with valid data
+- GIVEN: Valid user email and password
+- WHEN: POST /api/users with {"email": "test@example.com", "password": "secure123"}
+- THEN: Returns 201 with user object containing id and email (password excluded)
+```
+
+### Document Non-Goals Explicitly
+
+Prevent scope creep by listing what's NOT included:
+
+```markdown
+## 3. Non-goals
+- NG1: Social authentication (OAuth) - future feature
+- NG2: Password reset flow - separate spec required
+- NG3: Email verification - not MVP requirement
+```
+
+### Include Negative Test Cases
+
+Test what should NOT happen:
+
+```markdown
+### A5: Reject duplicate email
+- GIVEN: User with email "test@example.com" exists
+- WHEN: POST /api/users with same email
+- THEN: Returns 409 with error "Email already registered"
+```
+
+## Planning
+
+### Keep Tasks Small
+
+Each task should be:
+- Implementable in 1-3 hours
+- Independently verifiable
+- Committable on its own
+
+**Bad:**
+```markdown
+## Task 1: Implement user authentication
+- Add login/logout/register endpoints
+- Add JWT middleware
+- Add password hashing
+- Add tests
+```
+
+**Good:**
+```markdown
+## Task 1: Add password hashing utility
+- Create hashPassword() and verifyPassword() functions
+- Use bcrypt with cost factor 10
+- Add unit tests
+
+## Task 2: Add user registration endpoint
+- POST /api/register route
+- Validate email/password
+- Store hashed password
+- Add integration tests
+
+## Task 3: Add login endpoint
+- POST /api/login route
+- Verify credentials
+- Generate JWT
+- Add integration tests
+```
+
+### Order by Dependencies
+
+```markdown
+## Task 1: Database schema
+Dependencies: None
+
+## Task 2: Data access layer
+Dependencies: Task 1
+
+## Task 3: API endpoints
+Dependencies: Task 2
+
+## Task 4: Integration tests
+Dependencies: Task 3
+```
+
+### Include Verification Steps
+
+Each task should specify how to verify completion:
+
+```markdown
+## Task 2: Add login endpoint
+
+### Verification:
+- [ ] `npm test -- login.test.js` passes
+- [ ] Manual test: POST /api/login returns JWT
+- [ ] Manual test: Invalid credentials return 401
+- [ ] Code review: password not logged or exposed
+```
+
+## Implementation
+
+### Use Test-Driven Development
+
+1. Write test for acceptance criterion
+2. Confirm test fails (red)
+3. Implement minimal code to pass (green)
+4. Refactor if needed
+5. Commit
+
+**Benefits:**
+- Tests validate spec directly
+- Prevents over-engineering
+- Provides regression protection
+
+### Commit After Each Task
+
+```bash
+git add .
+git commit -m "[Task 3] Add login endpoint
+
+Spec: specs/user-auth.md
+Section: R2 - User Login
+
+Changes:
+- Added POST /api/login route
+- Validates credentials against database
+- Returns JWT on success
+- Returns 401 for invalid credentials
+
+Verified by:
+- Engineer: implemented per spec
+- Tester: all acceptance criteria pass
+- Reviewer: approved with 0 issues"
+```
+
+### Stop on Ambiguity
+
+If the spec is unclear, **stop implementing**:
+
+1. Document the ambiguity
+2. Update the spec with a question
+3. Get clarification from stakeholders
+4. Update spec with the decision
+5. Resume implementation
+
+**Never guess what the spec means.**
+
+## Multi-Agent Workflow
+
+### Let Agents Do Their Job
+
+**Engineer:**
+- Implements exactly what spec says
+- Doesn't add "nice to have" features
+- Stops if spec is ambiguous
+
+**Tester:**
+- Validates against acceptance criteria only
+- Doesn't test for unstated requirements
+- Reports spec mismatches objectively
+
+**Reviewer:**
+- Checks spec alignment strictly
+- Flags security issues
+- Doesn't nitpick style (unless spec specifies standards)
+
+### Use Parallel Instances for Complex Work
+
+For large features, run multiple Claude instances:
+
+```bash
+# Terminal 1: Main implementation
+cd ~/project
+claude
+> /implement specs/feature-plan.md
+
+# Terminal 2: Test writing
+cd ~/project-test-worktree
+claude
+> Focus on writing comprehensive tests for specs/feature.md
+
+# Terminal 3: Documentation
+cd ~/project-docs-worktree
+claude
+> Update API documentation for specs/feature.md
+```
+
+### Preserve Context with Subagents
+
+For exploration during implementation:
+
+```
+You: I need to understand how authentication works in this codebase
+
+Claude: Let me use a subagent to explore the authentication patterns
+[spawns explore agent]
+
+Claude: Based on the exploration:
+- Auth uses JWT middleware in src/middleware/auth.js
+- Tokens stored in httpOnly cookies
+- Token expiry set to 7 days
+
+Now implementing your feature using these patterns...
+```
+
+## Code Quality
+
+### Follow Existing Patterns
+
+Spec should reference codebase patterns:
+
+```markdown
+## 6. Constraints & invariants
+
+### C1: Code patterns
+- Follow existing Express.js router structure in src/routes/
+- Use Prisma ORM for database access (no raw SQL)
+- Error handling via src/middleware/errorHandler.js
+- Tests use Jest + supertest pattern from existing tests/
+```
+
+### Security by Default
+
+Always include security checks:
+
+```markdown
+### A8: Prevent SQL injection
+- GIVEN: Malicious input with SQL syntax
+- WHEN: Any database operation
+- THEN: Input is parameterized/sanitized, query executes safely
+
+### A9: Prevent XSS
+- GIVEN: User input contains <script> tags
+- WHEN: Data is returned in API response
+- THEN: No script execution possible (proper content-type headers)
+```
+
+### Write Tests That Match Specs
+
+Test names should reference acceptance criteria:
+
+```javascript
+// spec: A1 - Create user with valid data
+test('A1: POST /api/users with valid data returns 201', async () => {
+  const response = await request(app)
+    .post('/api/users')
+    .send({ email: 'test@example.com', password: 'secure123' });
+
+  expect(response.status).toBe(201);
+  expect(response.body).toHaveProperty('id');
+  expect(response.body.email).toBe('test@example.com');
+  expect(response.body).not.toHaveProperty('password');
+});
+```
+
+## Context Management
+
+### Use /clear Strategically
+
+Clear context when:
+- Switching to a different feature
+- After completing several tasks
+- When Claude seems to lose focus
+- Before starting a new planning session
+
+**Don't clear when:**
+- In the middle of implementing a task
+- During an active debugging session
+- When context is still relevant
+
+### Reference Files Explicitly
+
+```
+# Bad
+"Update the user model"
+
+# Good
+"Read src/models/User.js and update according to specs/user-auth.md section R2"
+```
+
+### Provide Visual Context
+
+For UI work:
+- Paste screenshots of designs
+- Drag-drop mockups
+- Screenshot current state for comparison
+
+```bash
+# Take screenshot (macOS)
+Cmd+Ctrl+Shift+4
+
+# In Claude
+Ctrl+V to paste
+"Implement the login form to match this design"
+```
+
+## Iteration Patterns
+
+### Explore â†’ Plan â†’ Code â†’ Commit
+
+**Always follow this order:**
+
+1. **Explore:** Understand codebase, read relevant files
+2. **Plan:** Create task breakdown with verification steps
+3. **Code:** Implement one task at a time
+4. **Commit:** Verify and commit before next task
+
+**Don't:**
+- Code before understanding existing patterns
+- Skip planning for "quick fixes"
+- Batch multiple tasks before committing
+
+### Fix Forward, Not Backward
+
+If you discover an issue after committing:
+
+```bash
+# Good: Fix in new commit
+git commit -m "[Task 3] Add login endpoint"
+# [discover issue]
+git commit -m "[Task 3.1] Fix password validation in login"
+
+# Bad: Amending or rebasing
+git commit --amend  # Don't do this
+git rebase -i       # Don't do this
+```
+
+**Exception:** Very recent commits not pushed yet.
+
+### Evolve Specs Based on Reality
+
+If implementation reveals spec issues:
+
+1. Stop implementation
+2. Document the discovery
+3. Update spec with correct requirements
+4. Update plan if needed
+5. Resume implementation
+
+**Example:**
+```markdown
+## 7. Open questions
+
+~~Q1: Should validation happen client or server side?~~
+**Decision (2024-01-15):** Server-side validation only. Client validation
+added as NG1 (not in scope). Discovered during implementation that our
+API is used by mobile apps, so client validation wouldn't be reliable.
+```
+
+## Anti-Patterns to Avoid
+
+### Don't Invent Requirements
+
+**Bad:**
+```
+Spec says: "Add user registration"
+Engineer implements: Registration + email verification + password reset
+```
+
+**Good:**
+```
+Spec says: "Add user registration"
+Engineer asks: "Spec only mentions registration. Should I add email
+verification? It's not in the acceptance criteria."
+```
+
+### Don't Skip Tests
+
+**Bad:**
+```
+"Implementation works manually, tests can come later"
+```
+
+**Good:**
+```
+"Tests written first, implementation makes them pass"
+```
+
+### Don't Batch Commits
+
+**Bad:**
+```
+[Implements tasks 1, 2, 3, 4]
+git commit -m "Implemented user authentication"
+```
+
+**Good:**
+```
+[Implements task 1]
+git commit -m "[Task 1] Add password hashing"
+[Implements task 2]
+git commit -m "[Task 2] Add registration endpoint"
+```
+
+### Don't Over-Engineer
+
+**Bad:**
+```
+Spec: "Store todos in a file"
+Implementation:
+- Abstract storage interface
+- File storage adapter
+- Memory storage adapter
+- Factory pattern for storage selection
+- Config system for storage backend
+```
+
+**Good:**
+```
+Spec: "Store todos in a file"
+Implementation:
+- Simple functions: saveTodos(), loadTodos()
+- JSON file at configurable path
+- Atomic writes for safety
+```
+
+## Measuring Success
+
+You're doing it right when:
+
+- âœ… Every feature has a complete spec before coding
+- âœ… Tests validate acceptance criteria directly
+- âœ… Code implements exactly what spec says (no more, no less)
+- âœ… Commits are small and focused
+- âœ… No "looks good to me" without verification
+- âœ… Specs evolve based on learnings
+
+You need to improve when:
+
+- âŒ Implementing features without specs
+- âŒ Tests written after the fact
+- âŒ Code does more than spec requires
+- âŒ Large, multi-purpose commits
+- âŒ Approval based on code review alone
+- âŒ Specs never updated after creation
+
+## Resources
+
+- [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
+- [Getting Started Guide](./getting-started.md)
+- [Workflow Documentation](./workflow.md)
+- [Example Specs](../specs/)
+
+
+=== docs\design-system.md ===
+
+# Design System Guide
+
+This document outlines the design system and UI component standards for both Android and iOS platforms.
+
+## Overview
+
+Both platforms should maintain visual consistency while respecting platform-specific design guidelines:
+- **Android**: Material 3 Design System
+- **iOS**: Human Interface Guidelines
+
+## Color System
+
+### Semantic Colors
+
+Define colors by their purpose, not their value:
+
+| Semantic Name | Android (Material 3) | iOS |
+|---------------|---------------------|-----|
+| Primary | `MaterialTheme.colorScheme.primary` | `Color.accentColor` |
+| On Primary | `MaterialTheme.colorScheme.onPrimary` | `.white` |
+| Background | `MaterialTheme.colorScheme.background` | `Color(.systemBackground)` |
+| Surface | `MaterialTheme.colorScheme.surface` | `Color(.secondarySystemBackground)` |
+| Error | `MaterialTheme.colorScheme.error` | `Color.red` |
+| On Error | `MaterialTheme.colorScheme.onError` | `.white` |
+
+### Android Theme Setup
+
+```kotlin
+// Color.kt
+val md_theme_light_primary = Color(0xFF6750A4)
+val md_theme_light_onPrimary = Color(0xFFFFFFFF)
+val md_theme_light_background = Color(0xFFFFFBFE)
+// ... more colors
+
+val md_theme_dark_primary = Color(0xFFD0BCFF)
+val md_theme_dark_onPrimary = Color(0xFF381E72)
+val md_theme_dark_background = Color(0xFF1C1B1F)
+// ... more colors
+
+// Theme.kt
+private val LightColorScheme = lightColorScheme(
+    primary = md_theme_light_primary,
+    onPrimary = md_theme_light_onPrimary,
+    background = md_theme_light_background,
+    // ...
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = md_theme_dark_primary,
+    onPrimary = md_theme_dark_onPrimary,
+    background = md_theme_dark_background,
+    // ...
+)
+```
+
+### iOS Theme Setup
+
+```swift
+// AppTheme.swift
+enum AppTheme {
+    enum Colors {
+        static let primary = Color.accentColor
+        static let background = Color(.systemBackground)
+        static let surface = Color(.secondarySystemBackground)
+        static let error = Color.red
+        static let success = Color.green
+    }
+}
+
+// Supports automatic dark mode via system colors
+```
+
+## Typography
+
+### Android (Material 3 Type Scale)
+
+```kotlin
+val Typography = Typography(
+    displayLarge = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 57.sp,
+        lineHeight = 64.sp,
+        letterSpacing = (-0.25).sp
+    ),
+    headlineLarge = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 32.sp,
+        lineHeight = 40.sp
+    ),
+    titleLarge = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp
+    ),
+    bodyLarge = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp
+    ),
+    labelLarge = TextStyle(
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 20.sp
+    )
+)
+```
+
+### iOS (Dynamic Type)
+
+```swift
+// Use built-in text styles for Dynamic Type support
+Text("Headline")
+    .font(.headline)
+
+Text("Body text")
+    .font(.body)
+
+Text("Caption")
+    .font(.caption)
+
+// Custom fonts with Dynamic Type
+Text("Custom")
+    .font(.custom("MyFont", size: 16, relativeTo: .body))
+```
+
+## Spacing
+
+### Consistent Spacing Scale
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `xxs` | 4 | Minimal padding |
+| `xs` | 8 | Tight spacing |
+| `sm` | 12 | Compact spacing |
+| `md` | 16 | Standard spacing |
+| `lg` | 24 | Comfortable spacing |
+| `xl` | 32 | Section spacing |
+| `xxl` | 48 | Large sections |
+
+### Android
+```kotlin
+object Spacing {
+    val xxs = 4.dp
+    val xs = 8.dp
+    val sm = 12.dp
+    val md = 16.dp
+    val lg = 24.dp
+    val xl = 32.dp
+    val xxl = 48.dp
+}
+```
+
+### iOS
+```swift
+enum Spacing {
+    static let xxs: CGFloat = 4
+    static let xs: CGFloat = 8
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 24
+    static let xl: CGFloat = 32
+    static let xxl: CGFloat = 48
+}
+```
+
+## Component Library
+
+### Buttons
+
+#### Primary Button
+
+**Android:**
+```kotlin
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled && !isLoading
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(text)
+        }
+    }
+}
+```
+
+**iOS:**
+```swift
+struct PrimaryButton: View {
+    let title: String
+    let action: () -> Void
+    var isLoading: Bool = false
+    var isEnabled: Bool = true
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                }
+                Text(title)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!isEnabled || isLoading)
+    }
+}
+```
+
+### Text Fields
+
+**Android:**
+```kotlin
+@Composable
+fun AppTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = modifier.fillMaxWidth(),
+        isError = error != null,
+        supportingText = error?.let { { Text(it) } },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        singleLine = true
+    )
+}
+```
+
+**iOS:**
+```swift
+struct AppTextField: View {
+    let label: String
+    @Binding var text: String
+    var error: String?
+    var keyboardType: UIKeyboardType = .default
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField(label, text: $text)
+                .keyboardType(keyboardType)
+                .textFieldStyle(.roundedBorder)
+            
+            if let error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+}
+```
+
+### Cards
+
+**Android:**
+```kotlin
+@Composable
+fun AppCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            content = content
+        )
+    }
+}
+```
+
+**iOS:**
+```swift
+struct AppCard<Content: View>: View {
+    let content: () -> Content
+    
+    var body: some View {
+        content()
+            .padding(Spacing.md)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+```
+
+### Loading States
+
+**Android:**
+```kotlin
+@Composable
+fun LoadingView(
+    message: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator()
+        message?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+```
+
+**iOS:**
+```swift
+struct LoadingView: View {
+    var message: String?
+    
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            ProgressView()
+            if let message {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+```
+
+### Error States
+
+**Android:**
+```kotlin
+@Composable
+fun ErrorView(
+    message: String,
+    onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Error,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center
+        )
+        onRetry?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = it) {
+                Text("Retry")
+            }
+        }
+    }
+}
+```
+
+**iOS:**
+```swift
+struct ErrorView: View {
+    let message: String
+    var onRetry: (() -> Void)?
+    
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundStyle(.red)
+            
+            Text(message)
+                .multilineTextAlignment(.center)
+            
+            if let onRetry {
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
+    }
+}
+```
+
+## Icons
+
+### Android
+Use Material Icons:
+```kotlin
+Icon(
+    imageVector = Icons.Filled.Home,
+    contentDescription = "Home"
+)
+
+// Extended icons
+Icon(
+    imageVector = Icons.Outlined.AccountCircle,
+    contentDescription = "Profile"
+)
+```
+
+### iOS
+Use SF Symbols:
+```swift
+Image(systemName: "house.fill")
+    .accessibilityLabel("Home")
+
+Image(systemName: "person.circle")
+    .accessibilityLabel("Profile")
+```
+
+## Responsive Design
+
+### Android
+```kotlin
+@Composable
+fun ResponsiveLayout(
+    content: @Composable () -> Unit
+) {
+    BoxWithConstraints {
+        val isCompact = maxWidth < 600.dp
+        val isExpanded = maxWidth >= 840.dp
+        
+        if (isCompact) {
+            // Phone layout
+        } else if (isExpanded) {
+            // Tablet/desktop layout
+        } else {
+            // Medium layout
+        }
+    }
+}
+```
+
+### iOS
+```swift
+struct ResponsiveLayout<Content: View>: View {
+    @Environment(\.horizontalSizeClass) var sizeClass
+    let content: () -> Content
+    
+    var body: some View {
+        if sizeClass == .compact {
+            // iPhone layout
+        } else {
+            // iPad layout
+        }
+    }
+}
+```
+
+## Animation
+
+### Android
+```kotlin
+// Animate visibility
+AnimatedVisibility(
+    visible = isVisible,
+    enter = fadeIn() + slideInVertically(),
+    exit = fadeOut() + slideOutVertically()
+) {
+    Content()
+}
+
+// Animate values
+val alpha by animateFloatAsState(
+    targetValue = if (isSelected) 1f else 0.5f
+)
+```
+
+### iOS
+```swift
+// Animate visibility
+withAnimation(.easeInOut) {
+    isVisible.toggle()
+}
+
+// Animate values
+Text("Hello")
+    .opacity(isSelected ? 1 : 0.5)
+    .animation(.easeInOut, value: isSelected)
+```
+
+## Dark Mode
+
+### Android
+```kotlin
+@Composable
+fun AppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
+}
+```
+
+### iOS
+Use semantic colors that automatically adapt:
+```swift
+// These automatically support dark mode
+Color(.systemBackground)
+Color(.label)
+Color(.secondaryLabel)
+Color(.tertiarySystemBackground)
+```
+
+## Resources
+
+- [Material 3 Design](https://m3.material.io/)
+- [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
+- [SF Symbols](https://developer.apple.com/sf-symbols/)
+- [Material Icons](https://fonts.google.com/icons)
+
+
+=== docs\environments.md ===
+
+# Environment Configuration Guide
+
+This document describes how to configure different environments (development, staging, production) for Android and iOS applications.
+
+## Overview
+
+Both platforms support multiple build configurations for different environments:
+
+| Environment | Purpose | API Server | Debug Features |
+|-------------|---------|------------|----------------|
+| Development | Local development | `api.dev.example.com` | Full logging, debug tools |
+| Staging | QA/Testing | `api.staging.example.com` | Logging, test tools |
+| Production | Live users | `api.example.com` | Minimal logging, no debug |
+
+## Android Configuration
+
+### Build Variants
+
+Android uses a combination of **build types** and **product flavors**:
+
+```
+Build Variants = Product Flavors Ã— Build Types
+
+dev + debug     = devDebug
+dev + release   = devRelease
+staging + debug = stagingDebug
+staging + release = stagingRelease
+prod + debug    = prodDebug
+prod + release  = prodRelease
+```
+
+### app/build.gradle.kts
+
+```kotlin
+android {
+    // Build types (debug/release configurations)
+    buildTypes {
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    
+    // Product flavors (environment configurations)
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            
+            buildConfigField("String", "API_BASE_URL", "\"https://api.dev.example.com/\"")
+            buildConfigField("String", "ENVIRONMENT", "\"development\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+        }
+        
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            
+            buildConfigField("String", "API_BASE_URL", "\"https://api.staging.example.com/\"")
+            buildConfigField("String", "ENVIRONMENT", "\"staging\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+        }
+        
+        create("prod") {
+            dimension = "environment"
+            // No suffix for production
+            
+            buildConfigField("String", "API_BASE_URL", "\"https://api.example.com/\"")
+            buildConfigField("String", "ENVIRONMENT", "\"production\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "false")
+        }
+    }
+    
+    buildFeatures {
+        buildConfig = true
+    }
+}
+```
+
+### Using Build Config
+
+```kotlin
+// In code
+val baseUrl = BuildConfig.API_BASE_URL
+val environment = BuildConfig.ENVIRONMENT
+val isLoggingEnabled = BuildConfig.ENABLE_LOGGING
+
+// Configure logging
+if (BuildConfig.ENABLE_LOGGING) {
+    Timber.plant(Timber.DebugTree())
+}
+
+// Configure API client
+val okHttpClient = OkHttpClient.Builder()
+    .apply {
+        if (BuildConfig.DEBUG || BuildConfig.ENABLE_LOGGING) {
+            addInterceptor(HttpLoggingInterceptor())
+        }
+    }
+    .build()
+```
+
+### Environment-Specific Resources
+
+Create resource directories for each flavor:
+
+```
+app/src/
+â”œâ”€â”€ main/           # Shared resources
+â”œâ”€â”€ dev/
+â”‚   â””â”€â”€ res/
+â”‚       â””â”€â”€ values/
+â”‚           â””â”€â”€ strings.xml  # Dev-specific strings
+â”œâ”€â”€ staging/
+â”‚   â””â”€â”€ res/
+â”‚       â””â”€â”€ values/
+â”‚           â””â”€â”€ strings.xml  # Staging-specific strings
+â””â”€â”€ prod/
+    â””â”€â”€ res/
+        â””â”€â”€ values/
+            â””â”€â”€ strings.xml  # Prod-specific strings
+```
+
+### Google Services (Firebase)
+
+Place environment-specific `google-services.json`:
+
+```
+app/src/
+â”œâ”€â”€ dev/google-services.json
+â”œâ”€â”€ staging/google-services.json
+â””â”€â”€ prod/google-services.json
+```
+
+### Build Commands
+
+```bash
+# Development
+./gradlew assembleDevDebug
+
+# Staging (for QA)
+./gradlew assembleStagingRelease
+
+# Production
+./gradlew assembleProdRelease
+./gradlew bundleProdRelease  # For Play Store (AAB)
+```
+
+## iOS Configuration
+
+### Build Configurations
+
+iOS uses Xcode configurations combined with schemes:
+
+1. **Configurations**: Debug, Release (and custom like Staging)
+2. **Schemes**: Define which configuration to use
+
+### xcconfig Files
+
+Create configuration files:
+
+```
+ios/App/
+â”œâ”€â”€ Configurations/
+â”‚   â”œâ”€â”€ Base.xcconfig
+â”‚   â”œâ”€â”€ Debug.xcconfig
+â”‚   â”œâ”€â”€ Staging.xcconfig
+â”‚   â””â”€â”€ Release.xcconfig
+```
+
+**Base.xcconfig:**
+```
+// Shared settings
+PRODUCT_NAME = MyApp
+SWIFT_VERSION = 5.9
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+```
+
+**Debug.xcconfig:**
+```
+#include "Base.xcconfig"
+
+API_BASE_URL = https:/$()/api.dev.example.com
+ENVIRONMENT = development
+ENABLE_LOGGING = YES
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app.dev
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Dev
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG DEV
+```
+
+**Staging.xcconfig:**
+```
+#include "Base.xcconfig"
+
+API_BASE_URL = https:/$()/api.staging.example.com
+ENVIRONMENT = staging
+ENABLE_LOGGING = YES
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app.staging
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Staging
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = STAGING
+```
+
+**Release.xcconfig:**
+```
+#include "Base.xcconfig"
+
+API_BASE_URL = https:/$()/api.example.com
+ENVIRONMENT = production
+ENABLE_LOGGING = NO
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.app
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = RELEASE
+```
+
+### Info.plist Configuration
+
+Add custom keys to Info.plist:
+
+```xml
+<key>API_BASE_URL</key>
+<string>$(API_BASE_URL)</string>
+<key>ENVIRONMENT</key>
+<string>$(ENVIRONMENT)</string>
+<key>ENABLE_LOGGING</key>
+<string>$(ENABLE_LOGGING)</string>
+```
+
+### Swift Environment Access
+
+```swift
+enum Environment {
+    static let apiBaseURL: URL = {
+        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
+              let url = URL(string: urlString) else {
+            fatalError("API_BASE_URL not configured")
+        }
+        return url
+    }()
+    
+    static let name: String = {
+        Bundle.main.object(forInfoDictionaryKey: "ENVIRONMENT") as? String ?? "unknown"
+    }()
+    
+    static let isLoggingEnabled: Bool = {
+        Bundle.main.object(forInfoDictionaryKey: "ENABLE_LOGGING") as? String == "YES"
+    }()
+    
+    static var isDevelopment: Bool {
+        #if DEV
+        return true
+        #else
+        return false
+        #endif
+    }
+    
+    static var isProduction: Bool {
+        #if RELEASE
+        return true
+        #else
+        return false
+        #endif
+    }
+}
+```
+
+### Compile-Time Configuration
+
+For simpler cases, use compiler flags:
+
+```swift
+struct Config {
+    static let apiBaseURL: URL = {
+        #if DEV
+        return URL(string: "https://api.dev.example.com")!
+        #elseif STAGING
+        return URL(string: "https://api.staging.example.com")!
+        #else
+        return URL(string: "https://api.example.com")!
+        #endif
+    }()
+    
+    static let isLoggingEnabled: Bool = {
+        #if DEBUG || STAGING
+        return true
+        #else
+        return false
+        #endif
+    }()
+}
+```
+
+### Schemes
+
+Create schemes for each environment:
+1. `App-Dev` â†’ Debug configuration
+2. `App-Staging` â†’ Staging configuration
+3. `App-Release` â†’ Release configuration
+
+### Build Commands
+
+```bash
+# Development
+xcodebuild -scheme "App-Dev" -configuration Debug
+
+# Staging
+xcodebuild -scheme "App-Staging" -configuration Staging
+
+# Production
+xcodebuild -scheme "App-Release" -configuration Release
+```
+
+## Secrets Management
+
+### Never Commit Secrets
+
+Add to `.gitignore`:
+```
+# Secrets
+.env
+.env.*
+**/google-services.json
+**/GoogleService-Info.plist
+**/secrets.properties
+```
+
+### Android Secrets
+
+Use `local.properties` or environment variables:
+
+```properties
+# local.properties (not committed)
+API_KEY_DEV=your_dev_key
+API_KEY_STAGING=your_staging_key
+API_KEY_PROD=your_prod_key
+```
+
+```kotlin
+// build.gradle.kts
+val localProperties = Properties()
+localProperties.load(project.rootProject.file("local.properties").inputStream())
+
+productFlavors {
+    create("dev") {
+        buildConfigField("String", "API_KEY", "\"${localProperties["API_KEY_DEV"]}\"")
+    }
+}
+```
+
+### iOS Secrets
+
+Use xcconfig with gitignored secrets file:
+
+```
+// Secrets.xcconfig (not committed)
+API_KEY = your_api_key_here
+
+// Debug.xcconfig
+#include "Secrets.xcconfig"
+```
+
+Or use environment variables in CI:
+
+```bash
+# In CI script
+echo "API_KEY = $API_KEY_SECRET" > ios/App/Configurations/Secrets.xcconfig
+```
+
+## Feature Flags
+
+### Implementation
+
+```kotlin
+// Android
+object FeatureFlags {
+    val newOnboarding: Boolean
+        get() = when (BuildConfig.ENVIRONMENT) {
+            "development" -> true
+            "staging" -> true
+            "production" -> RemoteConfig.getBoolean("new_onboarding")
+            else -> false
+        }
+}
+```
+
+```swift
+// iOS
+enum FeatureFlags {
+    static var newOnboarding: Bool {
+        switch Environment.name {
+        case "development", "staging":
+            return true
+        case "production":
+            return RemoteConfig.shared.bool(forKey: "new_onboarding")
+        default:
+            return false
+        }
+    }
+}
+```
+
+## CI/CD Environment Configuration
+
+### GitHub Actions Secrets
+
+Configure secrets per environment:
+
+```yaml
+# .github/workflows/android-release.yml
+jobs:
+  release:
+    environment: production  # Use production secrets
+    steps:
+      - name: Build
+        env:
+          API_KEY: ${{ secrets.API_KEY_PROD }}
+```
+
+### Environment-Specific Workflows
+
+```yaml
+# For staging
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-staging:
+    environment: staging
+    # ...
+
+# For production
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  deploy-production:
+    environment: production
+    # ...
+```
+
+## Testing Different Environments
+
+### Android
+
+```kotlin
+@Test
+fun testDevEnvironment() {
+    // Use dev build variant
+    assertEquals("development", BuildConfig.ENVIRONMENT)
+    assertTrue(BuildConfig.ENABLE_LOGGING)
+}
+```
+
+### iOS
+
+```swift
+func testDevEnvironment() {
+    #if DEV
+    XCTAssertEqual(Environment.name, "development")
+    XCTAssertTrue(Environment.isLoggingEnabled)
+    #endif
+}
+```
+
+## Checklist
+
+### Before Release
+
+- [ ] Verify correct API endpoints per environment
+- [ ] Check logging is disabled in production
+- [ ] Ensure debug tools are not included in production
+- [ ] Verify app icons differentiate environments
+- [ ] Test all environments in CI
+
+### Per Environment
+
+- [ ] API base URL configured
+- [ ] Analytics configured (different properties)
+- [ ] Crash reporting configured
+- [ ] Push notifications configured
+- [ ] Deep links configured
+- [ ] App signing configured
+
+## Resources
+
+- [Android Build Variants](https://developer.android.com/studio/build/build-variants)
+- [Xcode Build Configurations](https://developer.apple.com/documentation/xcode/customizing-the-build-phases-of-a-target)
+- [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
+
+
+=== docs\examples\README.md ===
+
+# Workflow Examples
+
+Complete examples demonstrating the claude-in-the-loop workflow.
+
+## Available Examples
+
+### 1. Todo API (specs/example-todo-api.md)
+
+A comprehensive REST API example showing:
+- Complete spec with all sections
+- Multiple functional requirements
+- Detailed acceptance criteria using Given-When-Then
+- Constraints and invariants
+- Data persistence requirements
+
+**What it demonstrates:**
+- How to write testable acceptance criteria
+- How to document API requirements
+- How to specify data models
+- How to handle CRUD operations
+- How to define validation rules
+
+**Use this as reference when:**
+- Building REST APIs
+- Defining data models
+- Writing integration tests
+- Specifying validation requirements
+
+---
+
+### 2. End-to-End Workflow (docs/getting-started.md)
+
+A simple "Hello API" example showing the complete workflow:
+- Creating a spec from template
+- Refining with `/spec` command
+- Generating plan with `/plan` command
+- Executing with `/implement` command
+- Verification and commit cycle
+
+**What it demonstrates:**
+- The complete development cycle
+- Minimal viable spec
+- Task breakdown process
+- Three-agent verification cycle
+
+**Use this when:**
+- Learning the workflow for the first time
+- Teaching others the process
+- Starting a very simple feature
+
+---
+
+## Running the Examples
+
+### Example 1: Todo API
+
+```bash
+# 1. Review the spec
+cat specs/example-todo-api.md
+
+# 2. Generate a plan
+claude
+> /plan specs/example-todo-api.md
+
+# 3. Implement (if you want to try it out)
+> /implement specs/example-todo-api-plan.md
+
+# Note: This requires setting up a project with your chosen stack
+# (Node.js/Express, Python/Flask, etc.)
+```
+
+### Example 2: Hello API (Getting Started)
+
+Follow the step-by-step guide in `docs/getting-started.md`:
+
+```bash
+# 1. Create the spec
+./scripts/new-spec.sh hello-api
+
+# 2. Edit specs/hello-api.md
+# (Follow example in getting-started.md)
+
+# 3. Run the workflow
+claude
+> /spec specs/hello-api.md
+> /plan specs/hello-api.md
+> /implement specs/hello-api-plan.md
+```
+
+---
+
+## Example Patterns
+
+### Pattern 1: API Endpoint
+
+```markdown
+# Feature: User Login Endpoint
+
+## 1. Problem statement
+Users need to authenticate to access protected resources.
+
+## 4. Functional requirements
+
+### R1: Login endpoint
+- POST /api/login
+- Request: `{ "email": string, "password": string }`
+- Response: `{ "token": string, "user": object }`
+
+## 5. Acceptance criteria
+
+### A1: Successful login
+- GIVEN: User exists with email "test@example.com" and password "pass123"
+- WHEN: POST /api/login with correct credentials
+- THEN: Returns 200 with JWT token and user object (excluding password)
+
+### A2: Invalid credentials
+- GIVEN: Incorrect password
+- WHEN: POST /api/login with wrong password
+- THEN: Returns 401 with error "Invalid credentials"
+- AND: Does not reveal whether email exists (security requirement)
+
+### A3: Missing fields
+- GIVEN: Request missing email or password
+- WHEN: POST /api/login
+- THEN: Returns 400 with error listing required fields
+```
+
+---
+
+### Pattern 2: Data Validation
+
+```markdown
+# Feature: Email Validation
+
+## 5. Acceptance criteria
+
+### A1: Valid email format accepted
+- GIVEN: Email in format "user@domain.com"
+- WHEN: Any endpoint accepting email
+- THEN: Validation passes
+
+### A2: Invalid format rejected
+- GIVEN: Email without @ symbol
+- WHEN: Any endpoint accepting email
+- THEN: Returns 400 with error "Invalid email format"
+
+### A3: Missing domain rejected
+- GIVEN: Email like "user@"
+- WHEN: Any endpoint accepting email
+- THEN: Returns 400 with error "Invalid email format"
+
+## 6. Constraints & invariants
+
+### C1: Email validation rules
+- Must contain exactly one @ symbol
+- Must have non-empty local part (before @)
+- Must have valid domain (after @)
+- Max length: 254 characters (RFC 5321)
+- Case-insensitive comparison
+```
+
+---
+
+### Pattern 3: Database Operation
+
+```markdown
+# Feature: User Data Persistence
+
+## 4. Functional requirements
+
+### R1: Store user data
+- Users persisted to database
+- Password stored as bcrypt hash
+- Email unique constraint enforced
+
+## 5. Acceptance criteria
+
+### A1: User created in database
+- GIVEN: Valid user data
+- WHEN: User registration succeeds
+- THEN: User record exists in database with hashed password
+
+### A2: Duplicate email rejected
+- GIVEN: User with email "test@example.com" exists
+- WHEN: Attempt to create another user with same email
+- THEN: Returns 409 with error "Email already registered"
+
+### A3: Password not stored in plain text
+- GIVEN: User created with password "mypassword"
+- WHEN: Query database for user record
+- THEN: Password field contains bcrypt hash (starts with "$2")
+- AND: Plain password not recoverable from hash
+
+## 6. Constraints & invariants
+
+### C1: Password hashing
+- Use bcrypt with cost factor 10
+- Hash generated server-side only
+- Never log or expose hash
+```
+
+---
+
+### Pattern 4: Error Handling
+
+```markdown
+# Feature: Error Handling
+
+## 5. Acceptance criteria
+
+### A1: Validation errors return 400
+- GIVEN: Invalid input (missing required field)
+- WHEN: Any endpoint with validation
+- THEN: Returns 400 with JSON error describing issue
+
+### A2: Not found returns 404
+- GIVEN: Resource doesn't exist
+- WHEN: GET /api/resource/:id
+- THEN: Returns 404 with error "Resource not found"
+
+### A3: Server errors return 500
+- GIVEN: Unexpected error (database down, etc.)
+- WHEN: Any endpoint
+- THEN: Returns 500 with generic error message
+- AND: Detailed error logged server-side
+- AND: No stack trace or sensitive info in response
+
+### A4: Error response format
+- GIVEN: Any error occurs
+- WHEN: Error response sent
+- THEN: Response is JSON with:
+  - `status`: HTTP status code
+  - `error`: Human-readable message
+  - `code`: Machine-readable error code (optional)
+
+## 6. Constraints & invariants
+
+### C1: Error logging
+- All errors logged to stderr
+- Include timestamp, request ID, and error details
+- Never log sensitive data (passwords, tokens, etc.)
+
+### C2: Security
+- Never expose stack traces to clients
+- Never reveal whether user exists in login errors
+- Generic messages for server errors
+```
+
+---
+
+## Creating Your Own Examples
+
+As you build features:
+
+1. **Save successful specs** as examples:
+   ```bash
+   cp specs/my-feature.md docs/examples/feature-name-example.md
+   ```
+
+2. **Document learnings:**
+   ```markdown
+   # What Worked Well
+   - Given-When-Then format made tests obvious
+   - Breaking tasks by endpoint kept changes small
+
+   # What Could Be Improved
+   - Should have specified error codes upfront
+   - Missed edge case for empty arrays
+   ```
+
+3. **Add to this README:**
+   - Brief description
+   - What it demonstrates
+   - When to reference it
+
+---
+
+## Contributing Examples
+
+Good examples to add:
+
+- **Frontend component** - React/Vue/etc with visual specs
+- **Background job** - Async processing with retry logic
+- **Data migration** - Schema changes with rollback plan
+- **Third-party integration** - API client with error handling
+- **Batch processing** - File upload and processing
+- **Real-time feature** - WebSocket or SSE implementation
+
+Each example should include:
+- Complete spec following template
+- Generated plan (optional)
+- Notes on what worked well
+- Common pitfalls encountered
+
+
+=== docs\getting-started.md ===
+
+# Getting Started with Claude-in-the-Loop
+
+This guide walks you through your first feature using the spec-driven, multi-agent workflow.
+
+## Prerequisites
+
+- [Claude Code](https://claude.com/claude-code) installed
+- Basic understanding of your project's tech stack
+- Git for version control
+
+## Quick Start
+
+### 1. Fork & Setup
+
+```bash
+# Clone or fork this repository
+git clone <your-fork-url>
+cd claude-in-the-loop
+
+# Run the interactive setup script
+# This configures your project name, package IDs, and environment
+./setup.sh
+```
+
+### 2. Create Your First Spec
+
+```bash
+# Use the helper script
+./scripts/new-spec.sh my-first-feature
+
+# Or manually
+cp specs/feature-template.md specs/my-first-feature.md
+```
+
+### 3. Refine the Spec with Claude
+
+```bash
+# Launch Claude Code
+claude
+
+# In Claude, use the /spec command
+/spec specs/my-first-feature.md
+```
+
+Claude will:
+- Ask clarifying questions about your feature
+- Help you define clear acceptance criteria
+- Ensure nothing is ambiguous
+
+**Example interaction:**
+```
+You: /spec specs/my-first-feature.md
+
+Claude: I'm reviewing your spec. I have a few questions:
+
+1. What should happen when a user tries to [edge case]?
+2. How do we verify that [requirement] is met?
+3. Is [behavior] in scope for this feature?
+
+You: [Answer the questions]
+
+Claude: [Updates spec with clear acceptance criteria]
+```
+
+### 4. Validate the Spec
+
+```bash
+./scripts/validate-spec.sh specs/my-first-feature.md
+```
+
+This ensures:
+- All required sections are complete
+- Acceptance criteria are defined
+- No placeholders remain
+
+### 5. Generate Implementation Plan
+
+```bash
+claude
+
+# In Claude
+/plan specs/my-first-feature.md
+```
+
+Claude will:
+- Explore your codebase
+- Understand existing patterns
+- Break the spec into small, sequential tasks
+- Create `specs/my-first-feature-plan.md`
+
+### 6. Execute the Implementation Loop
+
+```bash
+# In Claude
+/implement specs/my-first-feature-plan.md
+```
+
+This runs the three-agent cycle:
+
+**Engineer Agent:**
+- Implements the next task
+- Follows the spec exactly
+- Makes incremental changes
+
+**Tester Agent:**
+- Runs tests
+- Validates acceptance criteria
+- Reports any failures
+
+**Reviewer Agent:**
+- Checks spec alignment
+- Identifies security issues
+- Flags edge cases
+
+### 7. Iterate Until Complete
+
+The `/implement` command runs one task at a time. After each task:
+
+- Review the changes
+- Confirm the commit
+- Run `/implement` again for the next task
+
+**Continue until:**
+```
+âœ“ All tasks complete
+âœ“ All tests passing
+âœ“ All acceptance criteria met
+âœ“ Code review approved
+```
+
+## Example: End-to-End Flow
+
+Let's build a simple "Hello Screen" feature:
+
+### Step 1: Create Spec
+
+```bash
+./scripts/new-spec.sh hello-screen
+```
+
+Edit `specs/hello-screen.md`:
+
+```markdown
+# Feature: Hello Screen
+
+## 1. Problem statement
+Need a simple welcome screen that displays a greeting.
+
+## 2. Goals
+- G1: Create a Hello Screen
+
+## 3. Non-goals
+- NG1: User input
+- NG2: Custom greetings
+
+## 4. Functional requirements
+- R1: Screen displays "Hello, World!" text
+- R2: Text is centered
+
+## 5. Acceptance criteria
+- A1: Screen displays "Hello, World!"
+- A2: Text element is centered in the view
+- A3: (iOS) VoiceOver reads "Hello, World!"
+- A4: (Android) TalkBack reads "Hello, World!"
+
+## 6. Constraints & invariants
+- C1: Use standard platform typography
+- C2: Follow system theme (light/dark mode)
+
+## 7. Open questions
+- None
+```
+
+### Step 2: Refine with Claude
+
+```bash
+claude
+
+# In Claude:
+> /spec specs/hello-api.md
+```
+
+### Step 3: Generate Plan
+
+```bash
+# In Claude:
+> /plan specs/hello-screen.md
+```
+
+Claude creates `specs/hello-screen-plan.md`:
+
+```markdown
+## Task 1: Create Hello Screen
+- Implement basic UI with "Hello, World!" text
+- Ensure centering
+- Add accessibility labels
+
+## Task 2: Add tests
+- Verify text presence
+- Verify accessibility attributes
+```
+
+### Step 4: Implement
+
+```bash
+# In Claude:
+> /implement specs/hello-screen-plan.md
+```
+
+**What happens:**
+
+1. Engineer implements Task 1
+2. Tester validates the implementation
+3. Reviewer checks spec alignment
+4. Changes are committed
+5. Process repeats for Task 2, then Task 3
+
+### Step 5: Done!
+
+```
+âœ“ Feature complete
+âœ“ All tests passing
+âœ“ Spec requirements met
+âœ“ Ready for deployment
+```
+
+## Tips for Success
+
+### Write Clear Acceptance Criteria
+
+**Bad:**
+```
+- A1: API should work correctly
+```
+
+**Good:**
+```
+- A1: GET /api/hello returns 200 status
+- A2: Response contains "message" and "timestamp" fields
+- A3: Timestamp is ISO 8601 format in UTC timezone
+```
+
+### Start Small
+
+Your first spec should be simple:
+- 2-3 requirements
+- 3-5 acceptance criteria
+- Can be implemented in 1-2 hours
+
+### Use the Examples
+
+Reference `specs/example-todo-api.md` to see:
+- How to structure complex specs
+- How to write testable acceptance criteria
+- How to document constraints
+
+### Ask Questions
+
+When using `/spec`, don't hesitate to:
+- Ask Claude for clarification
+- Request examples
+- Discuss edge cases
+
+### Iterate on CLAUDE.md
+
+As you work, you'll discover project-specific patterns. Add them to `CLAUDE.md`:
+
+```markdown
+## Project-Specific Patterns
+
+- All API routes use Express.js Router
+- Tests use Jest with supertest
+- Database access uses Prisma ORM
+```
+
+## Common Issues
+
+### "Claude is inventing requirements"
+
+**Solution:** Your spec is too vague. Use `/spec` to refine it with explicit acceptance criteria.
+
+### "Tests keep failing"
+
+**Solution:**
+1. Check if acceptance criteria are actually met
+2. Review test implementation against spec
+3. Update spec if requirements were unclear
+
+### "Changes are too large"
+
+**Solution:** Break tasks into smaller pieces in your plan. Each task should be < 3 hours of work.
+
+## Next Steps
+
+- Read [docs/workflow.md](./workflow.md) for detailed workflow explanation
+- See [docs/examples/](./examples/) for more complete examples
+- Review [docs/best-practices.md](./best-practices.md) for advanced patterns
+- Check [CLAUDE.md](../CLAUDE.md) for complete reference
+
+## Getting Help
+
+1. Check the [troubleshooting guide](./troubleshooting.md)
+2. Review existing specs in `specs/` for patterns
+3. Ask Claude: "How should I structure a spec for [your use case]?"
+
+
+=== docs\github-workflows.md ===
+
+# GitHub Workflows & Fastlane Guide
+
+This repository uses **Fastlane** triggered by GitHub Actions for automated building and deployment.
+
+## Overview
+
+- **Version Management**: `release-please` automatically manages the CHANGELOG and version numbers.
+- **Android Release**: `.github/workflows/android-release.yml` -> Runs `fastlane deploy`
+- **iOS Release**: `.github/workflows/ios-release.yml` -> Runs `fastlane release`
+
+Both workflows trigger on tags matching `v*` (e.g., `v1.0.0`).
+
+## Release Process (Release Please)
+
+1. **Develop**: Merge feature PRs into `main`. This triggers Beta builds.
+2. **Accumulate**: `release-please` automatically maintains a "Release PR" that accumulates changes and bumps versions in `build.gradle.kts` and `project.yml`.
+3. **Release**: When you are ready to cut a production release, **merge the Release PR**.
+4. **Deploy**: Merging the PR creates a GitHub Release and a git tag (e.g. `v1.1.0`), which triggers the Android and iOS release workflows.
+
+## Prerequisites
+
+### Android Requirements
+- Google Play Console account with app created
+- Release keystore file
+- Google Cloud service account with Google Play Developer API access
+
+### iOS Requirements
+- Apple Developer account
+- App Store Connect app created
+- Distribution certificate (.p12)
+- Distribution provisioning profile
+- App Store Connect API key
+
+## Secrets Setup
+
+Add these secrets to your GitHub repository:
+
+### Android Secrets
+| Secret Name | Description |
+|------------|-------------|
+| `ANDROID_KEYSTORE_BASE64` | Base64 encoded keystore file |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore password |
+| `ANDROID_KEY_ALIAS` | Key alias |
+| `ANDROID_KEY_PASSWORD` | Key password |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Content of service account JSON file |
+| `ANDROID_PACKAGE_NAME` | Your app package name (e.g. com.example.app) |
+
+### iOS Secrets
+| Secret Name | Description |
+|------------|-------------|
+| `IOS_CERTIFICATES_P12` | Base64 encoded .p12 certificate |
+| `IOS_CERTIFICATES_PASSWORD` | Password for the .p12 file |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Base64 encoded .mobileprovision file |
+| `APP_STORE_CONNECT_API_KEY_ID` | API Key ID from App Store Connect |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID from App Store Connect |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | Base64 encoded .p8 API key file |
+| `IOS_BUNDLE_ID` | Your app bundle ID |
+| `IOS_APPLE_ID` | Your Apple ID email |
+| `IOS_ITC_TEAM_ID` | App Store Connect Team ID |
+| `IOS_TEAM_ID` | Apple Developer Team ID |
+
+## Fastlane Configuration
+
+### Android (`android/fastlane/Fastfile`)
+- `lane :test` - Runs unit tests
+- `lane :beta` - Deploys to Firebase App Distribution
+- `lane :deploy` - Deploys to Google Play (default: **internal** track)
+- `lane :promote` - Promotes a build (e.g., from internal to production)
+
+### iOS (`ios/fastlane/Fastfile`)
+- `lane :test` - Runs unit tests
+- `lane :beta` - Deploys to TestFlight
+- `lane :release` - Deploys to App Store
+
+## How to Release
+
+1. Review the automated "Release PR" created by `release-please`.
+2. Merge the PR.
+3. GitHub Actions will:
+   - Create a GitHub Release.
+   - Tag the commit (e.g., `v1.1.0`).
+   - Trigger `android-release.yml` (Internal Track).
+   - Trigger `ios-release.yml` (TestFlight External).
+
+## Local Usage
+
+You can also run Fastlane locally:
+
+```bash
+# Android
+cd android
+fastlane deploy
+
+# iOS
+cd ios
+fastlane release
+```
+
+
+=== docs\mcp-setup.md ===
+
+# MCP Server Setup Guide
+
+Model Context Protocol (MCP) servers extend Claude Code with additional capabilities like database access, API integrations, and custom tools.
+
+## What is MCP?
+
+MCP servers provide Claude with:
+- **Database access** - Query PostgreSQL, SQLite, etc.
+- **API integrations** - GitHub, Slack, custom APIs
+- **Browser automation** - Screenshots, testing with Puppeteer
+- **Web search** - Brave Search, Google, etc.
+- **Custom tools** - Your own integrations
+
+## Configuration
+
+### Option 1: Project-Specific (Recommended for Templates)
+
+Create `.mcp.json` in your project root:
+
+```bash
+# Copy the template
+cp .mcp.json.template .mcp.json
+
+# Edit to enable servers you need
+vim .mcp.json
+```
+
+**Benefits:**
+- Checked into git (team-wide access)
+- Different config per project
+- Easy to share and replicate
+
+### Option 2: Global Configuration
+
+Add to `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://localhost/mydb"
+      }
+    }
+  }
+}
+```
+
+**Benefits:**
+- Available in all projects
+- Personal tools and credentials
+- No need to configure per project
+
+## Common MCP Servers
+
+### Database Access
+
+#### PostgreSQL
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://user:pass@localhost:5432/dbname"
+      }
+    }
+  }
+}
+```
+
+**Use cases:**
+- Query database to understand schema
+- Verify data changes during implementation
+- Run SQL to validate acceptance criteria
+- Generate test data
+
+**Example usage:**
+```
+You: "Query the users table to see the schema"
+Claude: [Uses postgres MCP server]
+Claude: "The users table has columns: id, email, password_hash, created_at"
+```
+
+#### SQLite
+
+```json
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "./data/app.db"]
+    }
+  }
+}
+```
+
+---
+
+### GitHub Integration
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_your_personal_access_token"
+      }
+    }
+  }
+}
+```
+
+**Use cases:**
+- Create issues from spec sections
+- Update PRs with implementation notes
+- Close issues when tasks complete
+- Triage and categorize issues
+
+**Example usage:**
+```
+You: "Create a GitHub issue for implementing specs/user-auth.md"
+Claude: [Uses GitHub MCP server]
+Claude: "Created issue #42: Implement User Authentication"
+```
+
+**Required permissions:**
+- `repo` scope for private repos
+- `public_repo` for public repos only
+
+---
+
+### Browser Automation (Puppeteer)
+
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}
+```
+
+**Use cases:**
+- Screenshot current UI state
+- Visual regression testing
+- Iterate on UI to match designs
+- Verify responsive layouts
+
+**Example usage:**
+```
+You: "Screenshot the login page at localhost:3000/login"
+Claude: [Uses Puppeteer MCP server]
+Claude: [Shows screenshot]
+Claude: "The login form is centered and matches the design mock"
+```
+
+**Workflow pattern:**
+1. Implement UI component
+2. Screenshot result
+3. Compare to design
+4. Iterate until matching
+5. Commit
+
+---
+
+### Web Search
+
+```json
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "your_api_key_from_brave.com"
+      }
+    }
+  }
+}
+```
+
+**Use cases:**
+- Research libraries and best practices
+- Find documentation for APIs
+- Look up error messages
+- Discover solutions to problems
+
+**Example usage:**
+```
+You: "Search for best practices for JWT token storage"
+Claude: [Uses Brave Search MCP server]
+Claude: "Found recommendations: Use httpOnly cookies for web apps..."
+```
+
+**Get API key:**
+- Sign up at https://brave.com/search/api/
+
+---
+
+### HTTP Fetch
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}
+```
+
+**Use cases:**
+- Test your API endpoints
+- Fetch documentation from URLs
+- Validate external API integrations
+- Check service health
+
+**Example usage:**
+```
+You: "Test POST /api/users with sample data"
+Claude: [Uses fetch MCP server]
+Claude: "Response: 201 Created with user object. Matches acceptance criterion A1."
+```
+
+---
+
+### Persistent Memory
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+**Use cases:**
+- Remember project decisions across sessions
+- Store context about codebase
+- Track implementation patterns
+- Maintain todo lists between sessions
+
+**Example usage:**
+```
+You: "Remember that we use Prisma ORM for all database access"
+Claude: [Uses memory MCP server]
+Claude: "Stored: Database access pattern uses Prisma ORM"
+
+[Later session]
+You: "How do we access the database?"
+Claude: [Retrieves from memory]
+Claude: "We use Prisma ORM for all database access"
+```
+
+---
+
+## Security Best Practices
+
+### DO NOT commit secrets to `.mcp.json`
+
+**Bad:**
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "env": {
+        "DATABASE_URL": "postgresql://admin:secretpassword@localhost/prod"
+      }
+    }
+  }
+}
+```
+
+**Good:**
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+Then set in your shell:
+```bash
+export DATABASE_URL="postgresql://admin:secretpassword@localhost/prod"
+```
+
+### Use environment variables
+
+```bash
+# In ~/.bashrc or ~/.zshrc
+export GITHUB_TOKEN="ghp_your_token"
+export DATABASE_URL="postgresql://localhost/mydb"
+export BRAVE_API_KEY="your_key"
+```
+
+### Keep secrets in global config
+
+Put sensitive configs in `~/.claude.json` (not checked into git):
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### Team configuration template
+
+In `.mcp.json.template` (checked into git):
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "comment": "Set DATABASE_URL environment variable",
+      "disabled": true,
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+Team members copy and configure:
+```bash
+cp .mcp.json.template .mcp.json
+# Edit .mcp.json with your credentials (not committed)
+```
+
+Add to `.gitignore`:
+```
+.mcp.json
+```
+
+---
+
+## Enabling MCP Servers
+
+### Enable a server
+
+Edit `.mcp.json` and change `"disabled": true` to `"disabled": false`:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "disabled": false,  // â† changed from true
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://localhost/mydb"
+      }
+    }
+  }
+}
+```
+
+Or remove the `disabled` field entirely.
+
+### Restart Claude Code
+
+```bash
+# Exit Claude
+exit
+
+# Restart
+claude
+```
+
+### Verify server loaded
+
+```
+You: "List available MCP servers"
+Claude: "The following MCP servers are available:
+- postgres: PostgreSQL database access
+- ..."
+```
+
+---
+
+## Debugging MCP Issues
+
+### Use --mcp-debug flag
+
+```bash
+claude --mcp-debug
+```
+
+Shows:
+- Which servers loaded successfully
+- Configuration errors
+- Connection issues
+- Server stderr output
+
+### Common issues
+
+**Server not loading:**
+- Check `"disabled": false`
+- Verify command and args are correct
+- Ensure npx packages are installable
+
+**Connection errors:**
+- Verify credentials (tokens, passwords)
+- Check URLs and ports
+- Ensure services are running (database, etc.)
+
+**Permission errors:**
+- Verify environment variables are set
+- Check file permissions
+- Ensure tokens have required scopes
+
+---
+
+## Custom MCP Servers
+
+You can create your own MCP servers for project-specific tools.
+
+### Example: Custom Test Runner
+
+```javascript
+// scripts/mcp-test-runner.js
+const { Server } = require('@modelcontextprotocol/sdk/server');
+
+const server = new Server({
+  name: 'test-runner',
+  version: '1.0.0',
+});
+
+server.tool('run-tests', async (args) => {
+  const { file } = args;
+  // Run tests and return results
+  const results = await runTests(file);
+  return { results };
+});
+
+server.listen();
+```
+
+### Configure in .mcp.json
+
+```json
+{
+  "mcpServers": {
+    "test-runner": {
+      "command": "node",
+      "args": ["scripts/mcp-test-runner.js"]
+    }
+  }
+}
+```
+
+### Use in workflow
+
+```
+You: "Run tests for the login feature"
+Claude: [Uses test-runner MCP server]
+Claude: "Tests passed: 8/8. All acceptance criteria validated."
+```
+
+---
+
+## Recommended Setup for This Template
+
+For spec-driven development, recommended MCP servers:
+
+### Minimal Setup
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "comment": "Test API endpoints",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}
+```
+
+### With Database
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+### With UI Development
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "puppeteer": {
+      "comment": "Screenshots for visual iteration",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}
+```
+
+### Full Stack Development
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Resources
+
+- [MCP Documentation](https://modelcontextprotocol.io/)
+- [Available MCP Servers](https://github.com/modelcontextprotocol/servers)
+- [Building Custom Servers](https://modelcontextprotocol.io/docs/building-servers)
+- [Claude Code MCP Integration](https://docs.anthropic.com/claude/docs/claude-code#mcp-integration)
+
+
+=== docs\mobile-architecture.md ===
+
+# Mobile Architecture Guide
+
+This document describes the architecture patterns used in both Android and iOS applications.
+
+## Overview
+
+Both platforms follow **MVVM with Clean Architecture** principles:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      Presentation Layer                      â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚
+â”‚  â”‚   View/Screen   â”‚â—„â”€â”€â”€â”‚   ViewModel     â”‚                 â”‚
+â”‚  â”‚  (UI Components)â”‚    â”‚  (State Holder) â”‚                 â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                   â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                       Domain Layer                           â”‚
+â”‚                    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚
+â”‚                    â”‚      Use Cases       â”‚                 â”‚
+â”‚                    â”‚  (Business Logic)    â”‚                 â”‚
+â”‚                    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                   â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                        Data Layer                            â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚
+â”‚  â”‚  Remote Source  â”‚â—„â”€â”€â”€â”‚   Repository    â”‚â”€â”€â”€â–ºâ”‚Local Sourceâ”‚
+â”‚  â”‚    (API)        â”‚    â”‚                 â”‚    â”‚   (DB)     â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+## Layer Responsibilities
+
+### Presentation Layer
+- **Views/Screens**: Pure UI rendering, receives state, sends actions
+- **ViewModels**: Holds UI state, processes user actions, calls use cases
+
+### Domain Layer
+- **Use Cases**: Encapsulate business logic, orchestrate data operations
+- **Domain Models**: Pure data classes representing business entities
+
+### Data Layer
+- **Repositories**: Abstract data sources, handle caching strategy
+- **Remote Sources**: API clients, network requests
+- **Local Sources**: Database access, file storage
+
+## Android Implementation
+
+### Directory Structure
+```
+app/src/main/java/com/example/app/
+â”œâ”€â”€ di/                          # Dependency Injection
+â”‚   â”œâ”€â”€ AppModule.kt             # App-level dependencies
+â”‚   â”œâ”€â”€ NetworkModule.kt         # Retrofit, OkHttp
+â”‚   â””â”€â”€ DatabaseModule.kt        # Room database
+â”‚
+â”œâ”€â”€ data/
+â”‚   â”œâ”€â”€ remote/
+â”‚   â”‚   â”œâ”€â”€ api/                 # Retrofit service interfaces
+â”‚   â”‚   â””â”€â”€ dto/                 # Data Transfer Objects
+â”‚   â”œâ”€â”€ local/
+â”‚   â”‚   â”œâ”€â”€ dao/                 # Room DAOs
+â”‚   â”‚   â””â”€â”€ entity/              # Room entities
+â”‚   â””â”€â”€ repository/              # Repository implementations
+â”‚
+â”œâ”€â”€ domain/
+â”‚   â”œâ”€â”€ model/                   # Domain models
+â”‚   â”œâ”€â”€ repository/              # Repository interfaces
+â”‚   â””â”€â”€ usecase/                 # Use case classes
+â”‚
+â””â”€â”€ ui/
+    â”œâ”€â”€ theme/                   # Material theme
+    â”œâ”€â”€ components/              # Reusable composables
+    â”œâ”€â”€ navigation/              # Navigation setup
+    â””â”€â”€ screens/
+        â””â”€â”€ feature/
+            â”œâ”€â”€ FeatureScreen.kt
+            â”œâ”€â”€ FeatureViewModel.kt
+            â””â”€â”€ FeatureState.kt
+```
+
+### Dependency Injection with Hilt
+
+```kotlin
+// AppModule.kt
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    
+    @Provides
+    @Singleton
+    fun provideUserRepository(
+        api: UserApi,
+        dao: UserDao
+    ): UserRepository {
+        return UserRepositoryImpl(api, dao)
+    }
+}
+
+// Usage in ViewModel
+@HiltViewModel
+class UserViewModel @Inject constructor(
+    private val getUserUseCase: GetUserUseCase
+) : ViewModel() {
+    // ...
+}
+```
+
+### State Management
+
+```kotlin
+// Immutable state
+data class FeatureState(
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val items: List<Item> = emptyList()
+)
+
+// Actions as sealed interface
+sealed interface FeatureAction {
+    data object Refresh : FeatureAction
+    data class ItemClicked(val id: String) : FeatureAction
+    data class DeleteItem(val id: String) : FeatureAction
+}
+
+// ViewModel
+@HiltViewModel
+class FeatureViewModel @Inject constructor(
+    private val useCase: FeatureUseCase
+) : ViewModel() {
+    
+    private val _state = MutableStateFlow(FeatureState())
+    val state: StateFlow<FeatureState> = _state.asStateFlow()
+    
+    fun onAction(action: FeatureAction) {
+        when (action) {
+            is FeatureAction.Refresh -> refresh()
+            is FeatureAction.ItemClicked -> navigateToDetail(action.id)
+            is FeatureAction.DeleteItem -> deleteItem(action.id)
+        }
+    }
+    
+    private fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            useCase.getItems()
+                .onSuccess { items ->
+                    _state.update { it.copy(isLoading = false, items = items) }
+                }
+                .onFailure { error ->
+                    _state.update { it.copy(isLoading = false, error = error.message) }
+                }
+        }
+    }
+}
+```
+
+## iOS Implementation
+
+### Directory Structure
+```
+App/Sources/
+â”œâ”€â”€ App/
+â”‚   â”œâ”€â”€ AppApp.swift             # @main entry point
+â”‚   â”œâ”€â”€ AppState.swift           # Global app state
+â”‚   â””â”€â”€ ContentView.swift        # Root view
+â”‚
+â”œâ”€â”€ Core/
+â”‚   â”œâ”€â”€ DI/
+â”‚   â”‚   â””â”€â”€ DependencyContainer.swift
+â”‚   â”œâ”€â”€ Network/
+â”‚   â”‚   â”œâ”€â”€ APIClient.swift
+â”‚   â”‚   â””â”€â”€ Endpoints.swift
+â”‚   â”œâ”€â”€ Data/
+â”‚   â”‚   â”œâ”€â”€ DTOs/
+â”‚   â”‚   â””â”€â”€ Repositories/
+â”‚   â””â”€â”€ Domain/
+â”‚       â”œâ”€â”€ Models/
+â”‚       â””â”€â”€ UseCases/
+â”‚
+â”œâ”€â”€ Features/
+â”‚   â””â”€â”€ Feature/
+â”‚       â”œâ”€â”€ FeatureView.swift
+â”‚       â”œâ”€â”€ FeatureViewModel.swift
+â”‚       â””â”€â”€ FeatureModels.swift
+â”‚
+â””â”€â”€ UI/
+    â”œâ”€â”€ Theme/
+    â”œâ”€â”€ Components/
+    â””â”€â”€ Navigation/
+```
+
+### Dependency Injection
+
+```swift
+// DependencyContainer.swift
+@MainActor
+final class DependencyContainer {
+    static let shared = DependencyContainer()
+    
+    // Services
+    lazy var apiClient = APIClient.shared
+    
+    // Repositories
+    lazy var userRepository: UserRepository = {
+        UserRepositoryImpl(apiClient: apiClient)
+    }()
+    
+    // Use Cases
+    lazy var getUserUseCase: GetUserUseCase = {
+        GetUserUseCase(repository: userRepository)
+    }()
+}
+
+// Environment-based injection
+private struct DependencyKey: EnvironmentKey {
+    static let defaultValue = DependencyContainer.shared
+}
+
+extension EnvironmentValues {
+    var dependencies: DependencyContainer {
+        get { self[DependencyKey.self] }
+        set { self[DependencyKey.self] = newValue }
+    }
+}
+```
+
+### State Management
+
+```swift
+// State struct
+struct FeatureState {
+    var isLoading = false
+    var error: String?
+    var items: [Item] = []
+}
+
+// Actions enum
+enum FeatureAction {
+    case refresh
+    case itemTapped(id: String)
+    case deleteItem(id: String)
+}
+
+// ViewModel with @Observable (iOS 17+)
+@Observable
+@MainActor
+final class FeatureViewModel {
+    private(set) var state = FeatureState()
+    
+    private let useCase: FeatureUseCase
+    
+    init(useCase: FeatureUseCase = DependencyContainer.shared.featureUseCase) {
+        self.useCase = useCase
+    }
+    
+    func handle(_ action: FeatureAction) {
+        switch action {
+        case .refresh:
+            refresh()
+        case .itemTapped(let id):
+            navigateToDetail(id)
+        case .deleteItem(let id):
+            deleteItem(id)
+        }
+    }
+    
+    private func refresh() {
+        Task {
+            state.isLoading = true
+            state.error = nil
+            
+            do {
+                state.items = try await useCase.getItems()
+            } catch {
+                state.error = error.localizedDescription
+            }
+            
+            state.isLoading = false
+        }
+    }
+}
+```
+
+## Data Flow
+
+### Unidirectional Data Flow (UDF)
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                                                            â”‚
+â”‚    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”     Action     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”             â”‚
+â”‚    â”‚  View   â”‚ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º â”‚  ViewModel â”‚             â”‚
+â”‚    â”‚         â”‚                 â”‚             â”‚             â”‚
+â”‚    â”‚         â”‚ â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ â”‚             â”‚             â”‚
+â”‚    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     State       â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜             â”‚
+â”‚                                       â”‚                    â”‚
+â”‚                                       â”‚ Call               â”‚
+â”‚                                       â–¼                    â”‚
+â”‚                               â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”              â”‚
+â”‚                               â”‚  Use Case   â”‚              â”‚
+â”‚                               â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜              â”‚
+â”‚                                       â”‚                    â”‚
+â”‚                                       â–¼                    â”‚
+â”‚                               â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”              â”‚
+â”‚                               â”‚ Repository  â”‚              â”‚
+â”‚                               â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜              â”‚
+â”‚                                                            â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+1. **View** renders current **State**
+2. User interaction triggers **Action**
+3. **ViewModel** receives Action, updates State
+4. State change triggers View re-render
+
+## Error Handling
+
+### Android
+```kotlin
+// Result wrapper
+sealed class Result<out T> {
+    data class Success<T>(val data: T) : Result<T>()
+    data class Error(val exception: Throwable) : Result<Nothing>()
+}
+
+// Usage in repository
+suspend fun getUser(id: String): Result<User> {
+    return try {
+        Result.Success(api.getUser(id).toDomain())
+    } catch (e: Exception) {
+        Result.Error(e)
+    }
+}
+```
+
+### iOS
+```swift
+// Use Swift's native error handling
+func getUser(id: String) async throws -> User {
+    let response = try await apiClient.get("/users/\(id)")
+    return response.toDomain()
+}
+
+// In ViewModel
+do {
+    let user = try await useCase.getUser(id: id)
+    state.user = user
+} catch {
+    state.error = error.localizedDescription
+}
+```
+
+## Testing
+
+### Android
+```kotlin
+@Test
+fun `when refresh succeeds then state has items`() = runTest {
+    // Given
+    val items = listOf(Item("1", "Test"))
+    coEvery { useCase.getItems() } returns Result.Success(items)
+    
+    // When
+    viewModel.onAction(FeatureAction.Refresh)
+    
+    // Then
+    viewModel.state.test {
+        val state = awaitItem()
+        assertThat(state.items).isEqualTo(items)
+        assertThat(state.isLoading).isFalse()
+    }
+}
+```
+
+### iOS
+```swift
+func testRefreshSuccessUpdatesState() async {
+    // Given
+    let items = [Item(id: "1", name: "Test")]
+    mockUseCase.itemsToReturn = items
+    let viewModel = FeatureViewModel(useCase: mockUseCase)
+    
+    // When
+    await viewModel.handle(.refresh)
+    
+    // Then
+    XCTAssertEqual(viewModel.state.items, items)
+    XCTAssertFalse(viewModel.state.isLoading)
+}
+```
+
+## Best Practices
+
+1. **Keep Views Dumb**: Views only render state and forward actions
+2. **Immutable State**: State classes are immutable, create new instances on change
+3. **Single Source of Truth**: ViewModel owns the state
+4. **Testable Use Cases**: Business logic is isolated and testable
+5. **Repository Pattern**: Abstract data sources behind interfaces
+6. **Error Handling**: Always handle and display errors gracefully
+7. **Loading States**: Show loading indicators for async operations
+
+## Resources
+
+- [Android Architecture Guide](https://developer.android.com/topic/architecture)
+- [SwiftUI Data Flow](https://developer.apple.com/documentation/swiftui/model-data)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+
+
+=== docs\troubleshooting.md ===
+
+# Troubleshooting Guide
+
+Common issues and solutions for claude-in-the-loop development.
+
+## Spec Issues
+
+### Problem: Claude keeps inventing requirements
+
+**Symptoms:**
+- Engineer adds features not in spec
+- Implementation includes "nice to have" extras
+- Code does more than acceptance criteria require
+
+**Causes:**
+- Spec is too vague
+- Acceptance criteria not explicit
+- Non-goals not stated
+
+**Solutions:**
+
+1. **Refine the spec** with `/spec` command:
+   ```bash
+   /spec specs/my-feature.md
+   ```
+
+2. **Add explicit non-goals:**
+   ```markdown
+   ## 3. Non-goals
+   - NG1: User authentication (separate feature)
+   - NG2: Real-time updates (future enhancement)
+   - NG3: File uploads (out of scope)
+   ```
+
+3. **Make acceptance criteria testable:**
+   ```markdown
+   # Bad
+   - A1: System should handle errors gracefully
+
+   # Good
+   - A1: Invalid input returns 400 with JSON error message
+   - A2: Server errors return 500 with generic message (no stack trace)
+   - A3: All errors logged to stderr with timestamp and request ID
+   ```
+
+4. **Remind the engineer agent:**
+   ```
+   "Implement ONLY what specs/my-feature.md requires.
+   Do not add features, refactoring, or improvements not in the spec."
+   ```
+
+---
+
+### Problem: Spec and reality don't match
+
+**Symptoms:**
+- Tests pass but don't validate actual requirements
+- Implementation works but violates spec
+- Code is correct but spec is wrong
+
+**Causes:**
+- Spec written before understanding problem
+- Requirements changed during implementation
+- Edge cases discovered late
+
+**Solutions:**
+
+1. **Update the spec** (not the code):
+   ```markdown
+   ## 7. Open questions
+
+   ~~Q1: Should we validate email format?~~
+   **Decision (2024-01-15):** Yes. Added as A6.
+   Discovered users entering invalid emails during testing.
+
+   ## 5. Acceptance criteria
+
+   ### A6: Validate email format (ADDED)
+   - GIVEN: Invalid email format
+   - WHEN: POST /api/users
+   - THEN: Returns 400 with "Invalid email format"
+   ```
+
+2. **Update the plan:**
+   ```markdown
+   ## Task 2.1: Add email validation (NEW)
+   **Spec reference**: Section 5, A6
+   **Reason**: Discovered during testing
+   **Dependencies**: Task 2
+   ```
+
+3. **Commit the spec change:**
+   ```bash
+   git add specs/my-feature.md
+   git commit -m "Update spec: Add email validation requirement
+
+   Discovered during Task 2 testing that invalid emails were
+   accepted. Added A6 to require format validation."
+   ```
+
+4. **Resume implementation** with updated spec.
+
+---
+
+### Problem: Acceptance criteria too vague
+
+**Symptoms:**
+- Tests don't clearly verify requirements
+- Unclear what "done" means
+- Different interpretations possible
+
+**Causes:**
+- Using subjective language
+- Not specifying exact behavior
+- Missing edge cases
+
+**Solutions:**
+
+1. **Use Given-When-Then:**
+   ```markdown
+   # Bad
+   - A1: Login should work correctly
+
+   # Good
+   - A1: Valid credentials return JWT
+     - GIVEN: User exists with email "test@example.com" and password "pass123"
+     - WHEN: POST /api/login with correct credentials
+     - THEN: Returns 200 with JWT in response body
+   ```
+
+2. **Specify exact values:**
+   ```markdown
+   # Bad
+   - A2: API should be fast
+
+   # Good
+   - A2: GET /api/users responds within 200ms for 95th percentile
+   ```
+
+3. **Include negative cases:**
+   ```markdown
+   ### A3: Reject invalid credentials
+   - GIVEN: Incorrect password
+   - WHEN: POST /api/login with wrong password
+   - THEN: Returns 401 with error "Invalid credentials"
+   - AND: Does not reveal whether email exists
+   ```
+
+---
+
+## Implementation Issues
+
+### Problem: Tests keep failing
+
+**Symptoms:**
+- Tester agent reports failures
+- Implementation seems correct
+- Tests seem correct
+
+**Diagnosis Steps:**
+
+1. **Read the test output:**
+   ```bash
+   # Ask Claude to show the full test output
+   "Show me the complete test output from the last run"
+   ```
+
+2. **Verify against spec:**
+   ```
+   "Does the test validate acceptance criterion A2 exactly as written?"
+   ```
+
+3. **Check for mismatches:**
+   - Test tests something not in spec â†’ Fix test
+   - Code doesn't implement spec â†’ Fix code
+   - Spec is wrong â†’ Update spec first
+
+**Solutions:**
+
+**If test is wrong:**
+```javascript
+// Bad test (testing something not in spec)
+test('should send welcome email', async () => { // Not in acceptance criteria!
+  // ...
+});
+
+// Good test (matches A1 exactly)
+test('A1: POST /api/users returns 201 with user object', async () => {
+  // ...
+});
+```
+
+**If code is wrong:**
+```
+"The test correctly validates A2, but the implementation doesn't match.
+Read specs/my-feature.md section 5, criterion A2, and fix the code."
+```
+
+**If spec is wrong:**
+```
+1. Stop implementation
+2. Update spec with correct requirement
+3. Update test to match new spec
+4. Update implementation
+```
+
+---
+
+### Problem: Changes are too large
+
+**Symptoms:**
+- Tasks take many hours
+- Commits touch 10+ files
+- Hard to review changes
+- Difficult to verify completion
+
+**Causes:**
+- Tasks not broken down enough
+- Multiple tasks done at once
+- Over-engineering
+
+**Solutions:**
+
+1. **Re-plan with smaller tasks:**
+   ```markdown
+   # Bad
+   ## Task 1: Implement user management
+   - Add create/read/update/delete endpoints
+   - Add validation
+   - Add tests
+   - Add documentation
+
+   # Good
+   ## Task 1: Add create user endpoint
+   - POST /api/users route only
+   - Basic validation (email, password)
+   - Integration test for success case
+
+   ## Task 2: Add validation error tests
+   - Test missing email
+   - Test invalid email format
+   - Test weak password
+
+   ## Task 3: Add get user endpoint
+   - GET /api/users/:id route only
+   - Integration tests
+   ```
+
+2. **Use 1-3 hour rule:**
+   - Each task should be implementable in 1-3 hours
+   - If longer, break it down more
+
+3. **Commit incrementally:**
+   ```bash
+   # Don't wait until everything is done
+   git commit -m "[Task 1] Add create user endpoint"
+   # Then continue to Task 2
+   ```
+
+---
+
+### Problem: Code doesn't follow project patterns
+
+**Symptoms:**
+- Implementation uses different style
+- Doesn't match existing code
+- Review flags architectural inconsistencies
+
+**Causes:**
+- Spec doesn't reference existing patterns
+- Engineer didn't explore codebase first
+- Patterns not documented in CLAUDE.md
+
+**Solutions:**
+
+1. **Update CLAUDE.md** with project patterns:
+   ```markdown
+   ## Code Style
+
+   - All API routes use Express.js Router in src/routes/
+   - Database access via Prisma ORM (no raw SQL)
+   - Error handling via src/middleware/errorHandler.js
+   - Tests use Jest with supertest
+   - Config from environment variables via src/config/env.js
+   ```
+
+2. **Add to spec constraints:**
+   ```markdown
+   ## 6. Constraints & invariants
+
+   ### C1: Follow existing patterns
+   - Use Express Router pattern from src/routes/users.js
+   - Database queries via Prisma (see src/db/client.js)
+   - Errors thrown as AppError (see src/errors/AppError.js)
+   - Tests follow pattern in tests/integration/users.test.js
+   ```
+
+3. **Have engineer explore first:**
+   ```
+   "Before implementing, read these files to understand existing patterns:
+   - src/routes/users.js
+   - src/middleware/errorHandler.js
+   - tests/integration/users.test.js"
+   ```
+
+---
+
+## Workflow Issues
+
+### Problem: Claude Code slash commands not working
+
+**Symptoms:**
+- `/spec`, `/plan`, or `/implement` not recognized
+- "Unknown command" error
+
+**Causes:**
+- Commands not in `.claude/commands/` directory
+- Incorrect file format
+- Claude Code not in repository root
+
+**Solutions:**
+
+1. **Verify directory structure:**
+   ```bash
+   ls -la .claude/commands/
+   # Should show: spec.md, plan.md, implement.md, review.md
+   ```
+
+2. **Check you're in repo root:**
+   ```bash
+   pwd
+   # Should be the directory containing .claude/
+   ```
+
+3. **Restart Claude Code:**
+   ```bash
+   exit  # or Ctrl+D
+   claude
+   ```
+
+4. **Try full path:**
+   ```
+   # Instead of
+   /spec specs/my-feature.md
+
+   # Try
+   Read .claude/commands/spec.md and apply it to specs/my-feature.md
+   ```
+
+---
+
+### Problem: Agents not behaving as expected
+
+**Symptoms:**
+- Engineer agent modifying specs
+- Tester agent not running tests
+- Reviewer agent making changes
+
+**Causes:**
+- Agent frontmatter configuration incorrect
+- Not using Task tool to spawn agents
+- Agents not understanding their role
+
+**Solutions:**
+
+1. **Check agent frontmatter:**
+   ```yaml
+   ---
+   name: engineer
+   description: Implements tasks strictly from the spec.
+   tools: Read, Grep, Glob, Bash, Write
+   model: sonnet
+   permissionMode: acceptEdits
+   ---
+   ```
+
+2. **Invoke with Task tool:**
+   ```
+   "Use the Task tool with subagent_type='engineer' to implement Task 1"
+   ```
+
+3. **Explicitly state role:**
+   ```
+   "Acting as the engineer agent from .claude/agents/engineer.md,
+   implement Task 1 from the plan. Do not modify the spec."
+   ```
+
+---
+
+### Problem: Context window filling up
+
+**Symptoms:**
+- Claude responses getting slower
+- Seems to "forget" earlier conversation
+- Long pauses before responses
+
+**Causes:**
+- Long session without clearing
+- Many file reads accumulating
+- Large command outputs in history
+
+**Solutions:**
+
+1. **Use `/clear` command:**
+   ```bash
+   /clear
+   ```
+
+2. **Clear between features:**
+   ```
+   [Complete feature A]
+   /clear
+   [Start feature B]
+   ```
+
+3. **Use subagents for exploration:**
+   ```
+   "Use a subagent to explore the authentication code and summarize
+   the patterns, so we preserve context in this conversation."
+   ```
+
+4. **Don't clear mid-task:**
+   ```
+   # Bad
+   [Start implementing task 1]
+   /clear  # Don't do this!
+
+   # Good
+   [Complete task 1]
+   [Verify and commit]
+   /clear  # OK, task done
+   [Start task 2]
+   ```
+
+---
+
+## Git Issues
+
+### Problem: Commits don't follow convention
+
+**Symptoms:**
+- Unclear commit messages
+- Missing spec references
+- Can't track which commits belong to which feature
+
+**Causes:**
+- No commit template configured
+- Not specifying format to engineer agent
+- Batch committing multiple tasks
+
+**Solutions:**
+
+1. **Add to CLAUDE.md:**
+   ```markdown
+   ## Git Workflow
+
+   ### Commit Message Format
+   ```
+   [Task N] Brief description
+
+   Spec: specs/feature-name.md
+   Section: [Section reference]
+
+   Changes:
+   - Change 1
+   - Change 2
+
+   Verified by:
+   - Engineer: implemented per spec
+   - Tester: acceptance criteria pass
+   - Reviewer: approved
+   ```
+   ```
+
+2. **Create git commit template:**
+   ```bash
+   cat > .gitmessage <<EOF
+   [Task N] Brief description
+
+   Spec: specs/
+   Section:
+
+   Changes:
+   -
+
+   Verified by:
+   - Engineer:
+   - Tester:
+   - Reviewer:
+   EOF
+
+   git config commit.template .gitmessage
+   ```
+
+3. **Specify in /implement command:**
+   - Already included in `.claude/commands/implement.md`
+
+---
+
+## Performance Issues
+
+### Problem: Tasks taking too long
+
+**Symptoms:**
+- Single task takes multiple hours
+- Getting stuck in details
+- Over-engineering solutions
+
+**Causes:**
+- Tasks not small enough
+- Trying to handle all edge cases at once
+- Not following spec strictly
+
+**Solutions:**
+
+1. **Break task down further:**
+   ```markdown
+   # If Task 2 is too large
+   ## Task 2.1: Happy path only
+   ## Task 2.2: Add error handling
+   ## Task 2.3: Add edge cases
+   ```
+
+2. **Implement strictly to spec:**
+   ```
+   "Implement only what A1 and A2 require. Do not add error handling
+   for cases not in the acceptance criteria."
+   ```
+
+3. **Use time-boxing:**
+   ```
+   "If this task takes more than 2 hours, stop and break it into
+   smaller tasks."
+   ```
+
+---
+
+## Need More Help?
+
+1. **Check CLAUDE.md** - Repository-specific guidance
+2. **Review examples** - See `specs/example-todo-api.md`
+3. **Read best practices** - See `docs/best-practices.md`
+4. **Ask Claude:**
+   ```
+   "I'm having trouble with [specific issue]. What should I check?"
+   ```
+
+5. **Review Claude Code docs:**
+   - [Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
+   - [Official Documentation](https://claude.com/claude-code)
+
+
+=== docs\workflow.md ===
+
+# Development Workflow
+
+This repository follows **Trunk-Based Development**.
+
+## Core Principles
+
+1. **Main is Source of Truth**: The `main` branch is always deployable.
+2. **Short-Lived Branches**: Feature branches should be merged into `main` quickly (e.g., daily).
+3. **Automated Testing**: CI must pass before merging.
+4. **Automated Deployment**: Merging to `main` triggers beta deployment.
+
+## The Loop
+
+### 1. Create Feature Branch
+Start from `main` and create a short-lived feature branch.
+
+```bash
+git checkout main
+git pull
+git checkout -b feature/my-feature
+```
+
+### 2. Implement & Verify
+Follow the spec-driven implementation loop:
+
+```bash
+./scripts/scaffold-feature.sh MyFeature
+claude /spec specs/my-feature.md
+claude /plan specs/my-feature.md
+claude /implement specs/my-feature-plan.md
+```
+
+### 3. Open Pull Request
+When verification passes locally:
+
+```bash
+git push origin feature/my-feature
+```
+
+Open a PR to `main`. CI will run:
+- Lint checks
+- Unit tests
+- Build verification
+
+### 4. Merge to Main
+Once approved, squash and merge into `main`.
+
+**Triggers:**
+- `android-beta.yml`: Deploys to Firebase App Distribution
+- `ios-beta.yml`: Deploys to TestFlight
+
+### 5. Release
+When ready to ship to production, create a tag on `main`.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+**Triggers:**
+- `android-release.yml`: Deploys to Google Play (Internal Track)
+- `ios-release.yml`: Deploys to App Store Connect (External Beta)
+
+### 6. Promote (Android Only)
+To move from Internal -> Production on Android:
+
+Go to GitHub Actions -> `Android Promote to Production` -> Run workflow.
+
+

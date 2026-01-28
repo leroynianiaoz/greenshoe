@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and authorization
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  role          String         @default("DEVELOPER") // Role: DEVELOPER, PROJECT_MANAGER, ADMIN
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  sites         Site[]
+  operations    Operation[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// Site model for client websites
+model Site {
+  id                    String      @id @default(uuid())
+  name                  String
+  slug                  String      @unique
+  liveUrl               String      @map("live_url")
+  connectionType        String      @map("connection_type") // 'sftp', 'ssh', 'crawl-only'
+  encryptedCredentials  String?     @map("encrypted_credentials")
+  platformType          String?     @map("platform_type") // 'wordpress', 'static', etc.
+  status                String      @default("NEVER_PULLED") // SiteStatus: NEVER_PULLED, PULLING, ACTIVE, PUSHING, ERROR
+  lastPulledAt          DateTime?   @map("last_pulled_at")
+  backupSchedule        String?     @map("backup_schedule") // JSON string for backup schedule configuration
+  crawlSettings         String?     @map("crawl_settings") // JSON string for crawl options (videos, forms, assets)
+  createdById           String      @map("created_by")
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy             User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  operations            Operation[]
+  archives              Archive[]
+
+  @@map("sites")
+}
+
+// Operation model for tracking pull/push/restore operations
+model Operation {
+  id             String          @id @default(uuid())
+  siteId         String          @map("site_id")
+  userId         String          @map("user_id")
+  type           String          // OperationType: PULL, PUSH, RESTORE, DOWNLOAD, UPLOAD, BACKUP
+  status         String          @default("PENDING") // OperationStatus: PENDING, IN_PROGRESS, COMPLETED, FAILED, ROLLED_BACK
+  startedAt      DateTime?       @map("started_at")
+  completedAt    DateTime?       @map("completed_at")
+  errorMessage   String?         @map("error_message")
+  metadata       String?         // JSON string for storing additional operation data
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("operations")
+  @@index([siteId])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+}
+
+// Archive model for version history
+model Archive {
+  id         String   @id @default(uuid())
+  siteId     String   @map("site_id")
+  version    Int
+  filePath   String   @map("file_path")
+  dbPath     String?  @map("db_path") // Null for static HTML sites
+  fileSize   Int      @map("file_size") // Size in bytes
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("archives")
+  @@unique([siteId, version])
+  @@index([siteId])
+}
+
+// Notification model for in-app notifications
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      String           // NotificationType: PULL_SUCCESS, PULL_FAILURE, PUSH_SUCCESS, PUSH_FAILURE, ROLLBACK, RESTORE_SUCCESS, RESTORE_FAILURE
+  message   String
+  read      Boolean          @default(false)
+  metadata  String?          // JSON string for storing additional notification data (e.g., operation ID)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([read])
+}
+
+// Note: SQLite doesn't support enums, so we use String fields with validation in application code
+// Enum values are documented in comments above each field

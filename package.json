@@ -1,0 +1,26 @@
+{
+  "name": "greenshoe",
+  "version": "1.0.0",
+  "description": "Internal staging tool for client website management",
+  "scripts": {
+    "dashboard": "node dashboard-server.js",
+    "progress:start": "node update-progress.js start",
+    "progress:complete": "node update-progress.js complete",
+    "progress:activity": "node update-progress.js activity",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
+  },
+  "keywords": [
+    "staging",
+    "deployment",
+    "wordpress",
+    "static-sites"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.0"
+  }
+}
